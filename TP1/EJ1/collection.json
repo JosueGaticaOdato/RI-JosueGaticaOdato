@@ -4899,7 +4899,7 @@
   ],
   "statistics": {
     "N": 10000,
-    "num_terms": 793254,
-    "num_tokens": 20
+    "num_terms": 20,
+    "num_tokens": 793254
   }
 }

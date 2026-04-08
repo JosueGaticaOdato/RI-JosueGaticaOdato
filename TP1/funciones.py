@@ -1,4 +1,5 @@
-import string, re
+import re
+from nltk.stem import PorterStemmer
 
 # Eliminacion de acentos a cada palabra
 def remover_acentos(palabra):
@@ -20,6 +21,11 @@ def tokenizer(texto):
   palabras = [remover_acentos(palabra) for palabra in palabras] # Elimino acentos
 
   return [p for p in palabras if p] # Elimino vacios
+
+# Stemming usando PorterStemmer, libreria de nltk
+def stemming(terminos):
+  stemmer = PorterStemmer()
+  return [stemmer.stem(termino) for termino in terminos]
 
 
 #print(tokenizer("¡Canción del GATO, árbol!"))

@@ -3,7 +3,7 @@ from collections import defaultdict
 
 # ----------- LECTURA DE ARCHIVOS -----------------
 
-testCollection = "collection_test/TestCollection"
+testCollection = "../Colecciones/TestCollection"
 
 # Ruta de los documentos
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -99,8 +99,8 @@ for termino, docs in indice.items():
 
 salida["statistics"] = {
     "N": documentos,
-    "num_terms": total_tokens,
-    "num_tokens": len(vocabulario)
+    "num_terms": len(vocabulario),
+    "num_tokens": total_tokens
 }
 
 print("Exportando en", ruta_salida)

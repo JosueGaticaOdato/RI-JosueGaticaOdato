@@ -1,4 +1,4 @@
-TOP 10 terminos mas frecuentes y su CF (Collection Frequency):
+Los 10 terminos mas frecuentes y su CF (Collection Frequency):
 de 33057
 la 14166
 y 10956
@@ -10,7 +10,7 @@ del 4518
 los 3731
 las 2995
 
-TOP 10 terminos menos frecuentes y su CF (Collection Frequency):
+Los 10 terminos menos frecuentes y su CF (Collection Frequency):
 tvradio 1
 universidadenlace 1
 impresoagenda21 1

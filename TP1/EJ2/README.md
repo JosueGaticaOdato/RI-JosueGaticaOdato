@@ -23,3 +23,12 @@ Escriba un programa que realice análisis léxico sobre la colección RI-tknz-da
 * Un tercer archivo (frecuencias.txt), con: 
     * La lista de los 10 términos más frecuentes y su CF (Collection Frequency). Un término por línea.
     * La lista de los 10 términos menos frecuentes y su CF. Un término por línea.
+
+
+## Comando a ejecutar
+
+La ruta del archivo comienzo desde la carpeta donde estamos ubicados
+
+```bash
+python EJ2.py ../Colecciones/RI-tknz-data
+```

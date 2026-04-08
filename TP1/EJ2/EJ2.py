@@ -106,13 +106,13 @@ def analizador_lexico(
 
     with open("frecuencias.txt", "w", encoding="utf-8") as frecuencias_file:
         frecuencias_file.write(
-            "TOP 10 terminos mas frecuentes y su CF (Collection Frequency):\n"
+            "Los 10 terminos mas frecuentes y su CF (Collection Frequency):\n"
         )
         for termino, frecuencia in terminos_ordenados[:10]:
             frecuencias_file.write(f"{termino} {frecuencia}\n")
 
         frecuencias_file.write(
-            "\nTOP 10 terminos menos frecuentes y su CF (Collection Frequency):\n"
+            "\nLos 10 terminos menos frecuentes y su CF (Collection Frequency):\n"
         )
         for termino, frecuencia in terminos_ordenados[-10:]:
             frecuencias_file.write(f"{termino} {frecuencia}\n")

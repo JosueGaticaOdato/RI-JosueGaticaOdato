@@ -8,6 +8,7 @@ testCollection = "../Colecciones/TestCollection"
 # Ruta de los documentos
 base_dir = os.path.dirname(os.path.abspath(__file__))
 ruta = os.path.join(base_dir, testCollection)
+print(ruta)
 ruta_salida = os.path.join(base_dir, "collection.json")
 
 # Lectura de archivos
@@ -39,6 +40,7 @@ for archivo in archivos:
     # Nombre del archivo a numero
     doc_id = int(archivo.replace("doc", "").replace(".txt", ""))
 
+    print(os.path.join(ruta, archivo))
     with open(os.path.join(ruta, archivo), "r", encoding="utf-8") as f:
       texto = f.read()
 

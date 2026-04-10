@@ -1,15 +1,31 @@
-import re
+import os, re, json
+from collections import defaultdict
+
+# ----------- LECTURA DE ARCHIVOS -----------------
+
+testCollection = "../Colecciones/RE_collection_test/collection_test_ER2"
+
+# Ruta de los documentos
+base_dir = os.path.dirname(os.path.abspath(__file__))
+ruta = os.path.join(base_dir, testCollection)
+print(ruta)
+ruta_salida = os.path.join(base_dir, "collection.json")
+
+# Lectura de archivos
+archivos = [f for f in os.listdir(ruta) if f.endswith(".txt")]
 
 token_especificos = [
-    ('EMAIL', r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+'),
-    ('URL', r'https?://[^\s]+|www\.[^\s]+'), 
-    ('ABBREV_MULTI', r'(?:[A-Za-z]\.){2,}'), # Abreviaturas S.A. o U.S.A.
-    ('ABBREV', r'\b[A-Z][a-z]{1,5}\.'), # Abreviaturas Dr., Lic.
-    ('PHONE', r'\+?\d[\d\s\-]{6,}\d'), # Telefonos
+    ('EMAIL', r"[a-zA-Z0-9][a-zA-Z0-9._%+\-]*@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"),
+    ('URL', r'(?:https?|ftps?)://[^\s<>"\'`]+'), 
+    ('ABBREV_MULTI', r"(?:[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{1,4}\.){1,}[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{1,4}\.?"), # Abreviaturas S.A. o U.S.A.
+    ('ABBREV', r"[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{2,10}\."), # Abreviaturas Dr., Lic.
+    ('PHONE', r"[+\-]?\d[\d.,\-]*(?:%|°)?"), # Telefonos
     ('NUMBER', r'\d+(?:[.,]\d+)*'),
-    ('PROPER_NOUN', r'(?:\b[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+|$)){2,}'), # Nombres propios, con varias palabras con mayúscula
-    ('WORD', r'\b[a-záéíóúñ]+\b'),
+    ('FECHA', r"\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{4}"),
+    ('PROPER_NOUN', r"(?:[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+)(?:\s+(?!Sra\b|Sr\b|Dr\b)[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+)+"), # Nombres propios, con varias palabras con mayúscula
+    ('WORD', r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ]{2,}"),
     ('PUNCT', r'[¡!¿?.,;:]'),
+    ('SIGLA', r"[A-ZÁÉÍÓÚÜÑ]{2,}")
 ]
 
 def nuevo_tokenizer(texto):
@@ -21,18 +37,70 @@ def nuevo_tokenizer(texto):
         kind = match.lastgroup
         value = match.group().strip()
         
-        tokens.append((kind, value))
+        tokens.append(value)
     
     return tokens
 
-text = """
-El Ing. Juan Pérez trabaja en S.A. Tech.
-Podés escribirle a juan.perez@gmail.com o visitar https://empresa.com.
-Vive en Villa Carlos Paz y su teléfono es +54 11 1234-5678.
-Ganó 123,456.78 pesos.
-"""
+# ----------- DEFINICION DE VARIABLES -----------------
 
-tokens = nuevo_tokenizer(text)
+documentos = 0
+total_tokens = 0
+vocabulario = set()
+indice = defaultdict(lambda: defaultdict(int))
 
-for t in tokens:
-    print(t)
+
+# ----------- ANALISES LEXICO-----------------
+
+print("Comenzando Analisis Lexico")
+
+for archivo in archivos:
+    documentos += 1
+
+    # Nombre del archivo a numero
+    doc_id = int(archivo.replace("doc", "").replace(".txt", ""))
+
+    #print(os.path.join(ruta, archivo))
+    with open(os.path.join(ruta, archivo), "r", encoding="utf-8") as f:
+      texto = f.read()
+
+    # Obtengo los tokens
+    tokens = nuevo_tokenizer(texto)
+    total_tokens += len(tokens)
+
+    # Construccion del indice
+    for token in tokens:
+      indice[token][doc_id] += 1
+    
+    # Agregar palabras al vocabulario (como es conjunto no repite, obteniendo los terminos unicos)
+    vocabulario.update(tokens)
+
+# ----------- SALIDA EN JSON -----------------
+
+salida = {"data": [], "statistics": {} }
+
+for termino, docs in indice.items():
+    # Ordenar documentos por docid
+    pares_ordenados = sorted(docs.items())
+
+    docids = [doc for doc, _ in pares_ordenados]
+    freqs = [freq for _, freq in pares_ordenados]
+
+    entrada = {
+        "term": termino,
+        "docid": docids,
+        "freq": freqs,
+        "df": len(docids)
+    }
+    print(termino)
+    salida["data"].append(entrada)
+
+salida["statistics"] = {
+    "N": documentos,
+    "num_terms": len(vocabulario),
+    "num_tokens": total_tokens
+}
+
+print("Exportando en", ruta_salida)
+
+with open(ruta_salida, "w", encoding="utf-8") as f:
+    json.dump(salida, f, indent=2)

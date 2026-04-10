@@ -6,18 +6,19 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from funciones import procesar_tokens, procesar_documento, remover_stopwords
 
 # ----------- NUEVO TOKENIZER --------------------
-# ¿Como tratar numeros y signos de puntuacion
 
 token_especificos = [
-    ('EMAIL', r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+'),
-    ('URL', r'https?://[^\s]+|www\.[^\s]+'), 
-    ('ABBREV_MULTI', r'(?:[A-Za-z]\.){2,}'), # Abreviaturas S.A. o U.S.A.
-    ('ABBREV', r'\b[A-Z][a-z]{1,5}\.'), # Abreviaturas Dr., Lic.
-    ('PHONE', r'\+?\d[\d\s\-]{6,}\d'), # Telefonos
+    ('EMAIL', r"[a-zA-Z0-9][a-zA-Z0-9._%+\-]*@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"),
+    ('URL', r'(?:https?|ftps?)://[^\s<>"\'`]+'), 
+    ('ABBREV_MULTI', r"(?:[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{1,4}\.){1,}[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{1,4}\.?"), # Abreviaturas S.A. o U.S.A.
+    ('ABBREV', r"[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{2,10}\."), # Abreviaturas Dr., Lic.
+    ('PHONE', r"[+\-]?\d[\d.,\-]*(?:%|°)?"), # Telefonos
     ('NUMBER', r'\d+(?:[.,]\d+)*'),
-    ('PROPER_NOUN', r'(?:\b[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+|$)){2,}'), # Nombres propios, con varias palabras con mayúscula
-    ('WORD', r'\b[a-záéíóúñ]+\b'),
+    ('FECHA', r"\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{4}"),
+    ('PROPER_NOUN', r"(?:[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+)(?:\s+(?!Sra\b|Sr\b|Dr\b)[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+)+"), # Nombres propios, con varias palabras con mayúscula
+    ('WORD', r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ]{2,}"),
     ('PUNCT', r'[¡!¿?.,;:]'),
+    ('SIGLA', r"[A-ZÁÉÍÓÚÜÑ]{2,}")
 ]
 
 def nuevo_tokenizer(texto):
@@ -29,7 +30,7 @@ def nuevo_tokenizer(texto):
         kind = match.lastgroup
         value = match.group().strip()
         
-        tokens.append((kind, value))
+        tokens.append(value)
     
     return tokens
 
@@ -67,13 +68,16 @@ def analizador_lexico(
             tokens = procesar_tokens(path)
             contador_token += len(tokens)
             terminos = procesar_documento(path)
-            contador_termino += len(set(terminos))
-            documento_masCorto = min(documento_masCorto, len(terminos))
-            documento_masLargo = max(documento_masLargo, len(terminos))
 
             # Eliminamos palabras vacias si existen
             if archivo_stopwords:
                 terminos = remover_stopwords(terminos, archivo_stopwords)
+
+            contador_termino += len(set(terminos))
+            documento_masCorto = min(documento_masCorto, len(terminos))
+            documento_masLargo = max(documento_masLargo, len(terminos))
+
+
 
             # Manejamos TF y DF:
             for termino in terminos:
@@ -159,4 +163,4 @@ if __name__ == "__main__":
 
     analizador_lexico(directorio, archivo_stopwords)
 
-    print("Analizador lexico realizado, archivos .txt exportados.")
+    print("Analizador lexico CON NUEVO TOKENIZER realizado, archivos .txt exportados.")

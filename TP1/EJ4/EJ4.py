@@ -39,13 +39,14 @@ def analizador_lexico(
             tokens = procesar_tokens(path)
             contador_token += len(tokens)
             terminos = procesar_documento(path)
-            contador_termino += len(set(terminos))
-            documento_masCorto = min(documento_masCorto, len(terminos))
-            documento_masLargo = max(documento_masLargo, len(terminos))
 
             # Eliminamos palabras vacias si existen
             if archivo_stopwords:
                 terminos = remover_stopwords(terminos, archivo_stopwords)
+              
+            contador_termino += len(set(terminos))
+            documento_masCorto = min(documento_masCorto, len(terminos))
+            documento_masLargo = max(documento_masLargo, len(terminos))
 
             # Aplico Stemming
             terminos = stemming(terminos)

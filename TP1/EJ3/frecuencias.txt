@@ -1,18 +1,18 @@
 Los 10 terminos mas frecuentes y su CF (Collection Frequency):
-univers 2436
-nacional 1586
-cienci 1429
-estudi 1303
-carrer 1298
-facult 1267
-2012 1248
-educ 1200
-investig 1158
-inform 1114
+de 33057
+la 14166
+y 10956
+en 9908
+el 7107
+a 5808
+que 4659
+del 4518
+los 3731
+las 2995
 
 Los 10 terminos menos frecuentes y su CF (Collection Frequency):
-tvradi 1
-universidadenlac 1
+tvradio 1
+universidadenlace 1
 impresoagenda21 1
 comunicacioneudem 1
 españolversion 1

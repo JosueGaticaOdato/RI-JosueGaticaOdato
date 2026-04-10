@@ -1,0 +1,9 @@
+Resultados - Distribucion de la frecuencia de las letras
+---- COMPARACION CON LA SOLUCION PROVISTA -------
+Líneas iguales: 244
+Total líneas: 300
+Porcentaje: 81.33%
+---- COMPARACION CON LANGDETECT -------
+Líneas iguales: 243
+Total líneas: 300
+Porcentaje: 81.00%

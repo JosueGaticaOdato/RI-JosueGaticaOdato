@@ -86,7 +86,7 @@ def comparar_archivos(path1, path2):
     iguales = 0
     total = 0
     
-    with open(path1, "r", encoding="utf-8") as f1, open(os.path.join(ruta, path2), "r", encoding="utf-8") as f2:
+    with open(path1, "r", encoding="utf-8") as f1, open(path2, "r", encoding="utf-8") as f2:
         for linea1, linea2 in zip(f1, f2):
             total += 1
 
@@ -107,17 +107,48 @@ archivos_entrenamiento = {
 
 archivo_prueba = "test"
 archivo_soluciones = "solution"
+archivo_langdetect = "langdetect.txt"
 
 entrenamiento = cargar_entrenamiento(archivos_entrenamiento)
 
 print("Ejecutando identificador de idiomas (Basado en distribucion de letras)...")
-#identificar_idioma_linea(archivo_prueba, entrenamiento)
+identificar_idioma_linea(archivo_prueba, entrenamiento)
 print("Archivo con soluciones exportado!")
 
 # ---------------- COMPARAR ACIERTOS ----------------
 
-iguales, total, porcentaje = comparar_archivos(nombre_soluciones, archivo_soluciones)
+#Soluciones
+iguales1, total1, porcentaje1 = comparar_archivos(nombre_soluciones, os.path.join(ruta, archivo_soluciones))
 
-print("Líneas iguales:", iguales)
-print("Total líneas:", total)
-print(f"Porcentaje: {porcentaje:.2f}%")
+# Langdetect
+iguales2, total2, porcentaje2 = comparar_archivos(nombre_soluciones, archivo_langdetect)
+
+
+with open("resultados-metodo1.txt", "w", encoding="utf-8") as resultados_file:
+    resultados_file.write(
+        f"Resultados - Distribucion de la frecuencia de las letras\n"
+    )
+    resultados_file.write(
+        f"---- COMPARACION CON LA SOLUCION PROVISTA -------\n"
+    )
+    resultados_file.write(
+        f"Líneas iguales: {iguales1}\n"
+    )
+    resultados_file.write(
+        f"Total líneas: {total1}\n"
+    )
+    resultados_file.write(
+        f"Porcentaje: {porcentaje1:.2f}%\n"
+    )
+    resultados_file.write(
+        f"---- COMPARACION CON LANGDETECT -------\n"
+    )
+    resultados_file.write(
+        f"Líneas iguales: {iguales2}\n"
+    )
+    resultados_file.write(
+        f"Total líneas: {total2}\n"
+    )
+    resultados_file.write(
+        f"Porcentaje: {porcentaje2:.2f}%\n"
+    )

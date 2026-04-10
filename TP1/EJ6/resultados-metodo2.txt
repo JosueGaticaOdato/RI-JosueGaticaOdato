@@ -1,0 +1,9 @@
+Resultados - Probabilidad de letras precedentes
+---- COMPARACION CON LA SOLUCION PROVISTA -------
+Líneas iguales: 282
+Total líneas: 300
+Porcentaje: 94.00%
+---- COMPARACION CON LANGDETECT -------
+Líneas iguales: 281
+Total líneas: 300
+Porcentaje: 93.67%

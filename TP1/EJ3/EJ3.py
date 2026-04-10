@@ -1,9 +1,37 @@
 from collections import defaultdict
-import sys, os
+import sys, os, re
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from funciones import procesar_tokens, procesar_documento, remover_stopwords
+
+# ----------- NUEVO TOKENIZER --------------------
+# ¿Como tratar numeros y signos de puntuacion
+
+token_especificos = [
+    ('EMAIL', r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+'),
+    ('URL', r'https?://[^\s]+|www\.[^\s]+'), 
+    ('ABBREV_MULTI', r'(?:[A-Za-z]\.){2,}'), # Abreviaturas S.A. o U.S.A.
+    ('ABBREV', r'\b[A-Z][a-z]{1,5}\.'), # Abreviaturas Dr., Lic.
+    ('PHONE', r'\+?\d[\d\s\-]{6,}\d'), # Telefonos
+    ('NUMBER', r'\d+(?:[.,]\d+)*'),
+    ('PROPER_NOUN', r'(?:\b[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+|$)){2,}'), # Nombres propios, con varias palabras con mayúscula
+    ('WORD', r'\b[a-záéíóúñ]+\b'),
+    ('PUNCT', r'[¡!¿?.,;:]'),
+]
+
+def nuevo_tokenizer(texto):
+    tok_regex = '|'.join(f'(?P<{name}>{regex})' for name, regex in token_especificos)
+    
+    tokens = []
+    
+    for match in re.finditer(tok_regex, texto):
+        kind = match.lastgroup
+        value = match.group().strip()
+        
+        tokens.append((kind, value))
+    
+    return tokens
 
 
 def analizador_lexico(
@@ -57,7 +85,7 @@ def analizador_lexico(
             for termino in set(terminos):
                 if minimo <= len(termino) <= maximo:
                     df[termino] += 1  # Cuantos documentos aparece cada termino
-                    
+
     # Ordenar de mayor a menor frecuencia
     terminos_ordenados = sorted(tf.items(), key=lambda x: x[1], reverse=True)
     for termino, frecuencia in tf.items():
@@ -123,7 +151,7 @@ def analizador_lexico(
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python EJ2.py <directorio> [Opc: <archivo_stopwords>]")
+        print("Uso: python EJ3.py <directorio> [Opc: <archivo_stopwords>]")
         sys.exit(1)
 
     directorio = sys.argv[1]

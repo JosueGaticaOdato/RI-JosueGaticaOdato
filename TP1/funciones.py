@@ -1,5 +1,5 @@
 import re
-from nltk.stem import PorterStemmer
+from nltk.stem import SnowballStemmer
 
 # Eliminacion de acentos a cada palabra
 def remover_acentos(palabra):
@@ -22,9 +22,10 @@ def tokenizer(texto):
 
   return [p for p in palabras if p] # Elimino vacios
 
-# Stemming usando PorterStemmer, libreria de nltk
+
+# Stemming usando SnowballStemmer, libreria de nltk
 def stemming(terminos):
-  stemmer = PorterStemmer()
+  stemmer = SnowballStemmer("spanish")
   return [stemmer.stem(termino) for termino in terminos]
 
 

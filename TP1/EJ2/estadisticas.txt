@@ -1,9 +1,7 @@
-Cantidad de documentos procesados: 498
-Cantidad de tokens extraidos: 367829
-Cantidad de terminos extraidos: 30764
-Promedio de tokens por documento: 738.6124497991968
-Promedio de terminos por documento: 239.60441767068272
-Largo promedio de un termino: 8.43388376023924
-Cantidad de tokens del documento mas corto: 2
-Cantidad de tokens del documento mas largo: 51548
-Cantidad de terminos que aparecen solo 1 vez: 15161
+498
+253717 30054
+509.47 208.19
+8.25
+investigadores.uncoma.edu.ar.txt 4 2
+extensiondigital.fpsico.unr.edu.ar.txt 26187 24170
+14978

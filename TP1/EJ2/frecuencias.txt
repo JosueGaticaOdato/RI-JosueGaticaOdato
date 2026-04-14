@@ -1,14 +1,14 @@
 Los 10 terminos mas frecuentes y su CF (Collection Frequency):
-de 33057
-la 14166
-y 10956
-en 9908
-el 7107
-a 5808
-que 4659
-del 4518
-los 3731
-las 2995
+universidad 2260
+nacional 1447
+facultad 1262
+2012 1248
+mas 1038
+ciencias 1036
+ar 1000
+2011 973
+edu 886
+educacion 877
 
 Los 10 terminos menos frecuentes y su CF (Collection Frequency):
 tvradio 1

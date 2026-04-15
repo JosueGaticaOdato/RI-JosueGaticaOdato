@@ -3,7 +3,12 @@ import sys, os, re
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from funciones import procesar_tokens, procesar_documento, remover_stopwords
+# --------------- FUNCIONES --------------------
+
+def read_stopwords(archivo_stopwords):
+    with open(archivo_stopwords, "r", encoding="utf-8") as file:
+      stopwords = set(file.read().splitlines())
+    return stopwords
 
 # ----------- NUEVO TOKENIZER --------------------
 
@@ -21,7 +26,7 @@ token_especificos = [
     ('SIGLA', r"[A-ZÁÉÍÓÚÜÑ]{2,}")
 ]
 
-def nuevo_tokenizer(texto):
+def nuevo_tokenizer(texto,stopwords, minimo, maximo):
     tok_regex = '|'.join(f'(?P<{name}>{regex})' for name, regex in token_especificos)
     
     tokens = []
@@ -29,14 +34,28 @@ def nuevo_tokenizer(texto):
     for match in re.finditer(tok_regex, texto):
         kind = match.lastgroup
         value = match.group().strip()
+
+        # Stopwords
+        if stopwords and value in stopwords:
+            continue
+        
+        # Minimo y maximo
+        if len(value) > maximo or len(value) < minimo:
+            continue
         
         tokens.append(value)
     
     return tokens
 
+# -----------------------------------------------------
+
+# ---------------- ANALIZADOR LEXICO ------------------
+
+LONGITUD_MINIMA = 2 
+LONGITUD_MAXIMA = 23 #Palabra mas largo del diccionario https://www.elmundo.es/como/2023/06/19/649052cdfdddff8a4f8b4578.html
 
 def analizador_lexico(
-    directorio, archivo_stopwords=None, minimo=1, maximo=float("inf")
+    directorio, minimo, maximo, archivo_stopwords=None
 ):
 
     # --------- DEFINICION DE VARIBLES -------------
@@ -51,8 +70,13 @@ def analizador_lexico(
     terminos_unavez = 0
 
     # Cantidad de tokens y terminos del documento mas corto y mas largo
-    documento_masCorto = float("inf")
-    documento_masLargo = 0
+    nombre_documentoMasCorto = ""
+    tokens_doc_mas_corto = 0
+    terminos_doc_mas_corto = float("inf")
+    
+    nombre_documentoMasLargo = ""
+    tokens_doc_mas_largo = 0
+    terminos_doc_mas_largo = 0
 
     # Largo promedio de un termino
     letras_totales_terminos = 0
@@ -63,32 +87,42 @@ def analizador_lexico(
         if archivo.endswith(".txt"):
             path = os.path.join(directorio, archivo)
 
+            with open(path, "r", encoding="utf-8") as file:
+              texto = file.read()
+            
+            stopwords = None
+            if (archivo_stopwords != None):
+              stopwords = read_stopwords(archivo_stopwords)
+
             # --------- ANALISIS LEXICO ---------------
 
-            tokens = procesar_tokens(path)
+            tokens = nuevo_tokenizer(texto, stopwords, minimo, maximo)
+            terminos = set(tokens)
+
             contador_token += len(tokens)
-            terminos = procesar_documento(path)
 
-            # Eliminamos palabras vacias si existen
-            if archivo_stopwords:
-                terminos = remover_stopwords(terminos, archivo_stopwords)
+            # Obtencion del documento mas largo y mas corto
+            contador_termino += len(terminos)
 
-            contador_termino += len(set(terminos))
-            documento_masCorto = min(documento_masCorto, len(terminos))
-            documento_masLargo = max(documento_masLargo, len(terminos))
-
-
+            cantidad_tokens = len(tokens)
+            cantidad_terminos = len(terminos)
+            
+            if cantidad_terminos < terminos_doc_mas_corto:
+                terminos_doc_mas_corto = cantidad_terminos
+                tokens_doc_mas_corto = cantidad_tokens
+                nombre_documentoMasCorto = archivo
+            
+            if cantidad_terminos > terminos_doc_mas_largo:
+                terminos_doc_mas_largo = cantidad_terminos
+                tokens_doc_mas_largo = cantidad_tokens
+                nombre_documentoMasLargo = archivo
 
             # Manejamos TF y DF:
             for termino in terminos:
-                if minimo <= len(termino) <= maximo:
-                    tf[
-                        termino
-                    ] += 1  # Cuantas veces aparece cada termino en toda la coleccion
+              tf[termino] += 1  # Cuantas veces aparece cada termino en toda la coleccion
 
             for termino in set(terminos):
-                if minimo <= len(termino) <= maximo:
-                    df[termino] += 1  # Cuantos documentos aparece cada termino
+              df[termino] += 1  # Cuantos documentos aparece cada termino
 
     # Ordenar de mayor a menor frecuencia
     terminos_ordenados = sorted(tf.items(), key=lambda x: x[1], reverse=True)
@@ -111,31 +145,13 @@ def analizador_lexico(
     # --------- ESTADISTICAS.TXT -------------
 
     with open("estadisticas.txt", "w", encoding="utf-8") as estadisticas_file:
-        estadisticas_file.write(
-            f"Cantidad de documentos procesados: {len(os.listdir(directorio))}\n"
-        )
-        estadisticas_file.write(f"Cantidad de tokens extraidos: {contador_token}\n")
-        estadisticas_file.write(
-            f"Cantidad de terminos extraidos: {len(terminos_ordenados)}\n"
-        )
-        estadisticas_file.write(
-            f"Promedio de tokens por documento: {promedio_token_documento}\n"
-        )
-        estadisticas_file.write(
-            f"Promedio de terminos por documento: {promedio_termino_documento}\n"
-        )
-        estadisticas_file.write(
-            f"Largo promedio de un termino: {letras_totales_terminos/len(terminos_ordenados)}\n"
-        )
-        estadisticas_file.write(
-            f"Cantidad de tokens del documento mas corto: {documento_masCorto}\n"
-        )
-        estadisticas_file.write(
-            f"Cantidad de tokens del documento mas largo: {documento_masLargo}\n"
-        )
-        estadisticas_file.write(
-            f"Cantidad de terminos que aparecen solo 1 vez: {terminos_unavez}\n"
-        )
+        estadisticas_file.write(f"{len(os.listdir(directorio))}\n")
+        estadisticas_file.write(f"{contador_token} {len(terminos_ordenados)}\n")
+        estadisticas_file.write(f"{promedio_token_documento:.2f} {promedio_termino_documento:.2f}\n")
+        estadisticas_file.write(f"{(letras_totales_terminos/len(terminos_ordenados)):.2f}\n")
+        estadisticas_file.write(f"{nombre_documentoMasCorto} {tokens_doc_mas_corto} {terminos_doc_mas_corto}\n")
+        estadisticas_file.write(f"{nombre_documentoMasLargo} {tokens_doc_mas_largo} {terminos_doc_mas_largo}\n")
+        estadisticas_file.write(f"{terminos_unavez}\n")
 
     # --------- FRECUENCIAS.TXT -------------
 
@@ -161,6 +177,6 @@ if __name__ == "__main__":
     directorio = sys.argv[1]
     archivo_stopwords = sys.argv[2] if len(sys.argv) > 2 else None
 
-    analizador_lexico(directorio, archivo_stopwords)
+    analizador_lexico(directorio, LONGITUD_MINIMA, LONGITUD_MAXIMA, archivo_stopwords)
 
     print("Analizador lexico CON NUEVO TOKENIZER realizado, archivos .txt exportados.")

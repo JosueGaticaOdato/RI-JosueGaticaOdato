@@ -1,23 +1,23 @@
 Los 10 terminos mas frecuentes y su CF (Collection Frequency):
-de 33057
-la 14166
-y 10956
-en 9908
-el 7107
-a 5808
-que 4659
-del 4518
-los 3731
-las 2995
+universidad 307
+nacional 295
+argentina 194
+información 172
+ciencias 164
+investigación 162
+facultad 158
+2012 149
+inicio 146
+contacto 136
 
 Los 10 terminos menos frecuentes y su CF (Collection Frequency):
-tvradio 1
-universidadenlace 1
-impresoagenda21 1
-comunicacioneudem 1
-españolversion 1
-saspi 1
-sistemasgcyt 1
-4f3d7b0ddb7c5 1
-3725 1
+naturalizada 1
 target 1
+saspi 1
+sel 1
+3697 1
+ddb 1
+3725 1
+sspi 1
+3727 1
+sistemasgcyt 1

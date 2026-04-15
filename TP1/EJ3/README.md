@@ -18,3 +18,9 @@ La ruta del archivo comienzo desde la carpeta donde estamos ubicados
 ```bash
 python EJ3.py ../Colecciones/RI-tknz-data
 ```
+
+Con stopwords:
+
+```bash
+python EJ3.py ../Colecciones/RI-tknz-data stopwords.txt
+```

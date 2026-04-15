@@ -5,8 +5,8 @@ Vocabulario: 12189
 -----------------------------------------
 Cantidad de tokens unicos resultantes:
 Porter: 7993
-Lancaster:, 6877
+Lancaster: 6877
 -----------------------------------------
 Tiempo de ejecucion:
-Porter: 8.65088939666748 seg.
-Lancaster: 6.020229816436768 seg.
+Porter: 5.43 seg.
+Lancaster: 4.29 seg.

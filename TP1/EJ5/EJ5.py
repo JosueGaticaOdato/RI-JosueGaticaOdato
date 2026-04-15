@@ -96,7 +96,7 @@ def main():
         f"Porter: {len(unicos_porter)}\n"
     )
     resultados_file.write(
-        f"Lancaster:, {len(unicos_lancaster)}\n"
+        f"Lancaster: {len(unicos_lancaster)}\n"
     )
     resultados_file.write(
         f"-----------------------------------------\n"
@@ -105,10 +105,10 @@ def main():
         f"Tiempo de ejecucion:\n"
     )
     resultados_file.write(
-        f"Porter: {end_porter - start_porter} seg.\n"
+        f"Porter: {(end_porter - start_porter):.2f} seg.\n"
     )
     resultados_file.write(
-        f"Lancaster: {end_lancaster - start_lancaster} seg.\n"
+        f"Lancaster: {(end_lancaster - start_lancaster):.2f} seg.\n"
     )
 
   print("Resultados exportados en resultados.txt")

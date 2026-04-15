@@ -1,7 +1,7 @@
 498
-253717 30054
-509.47 208.19
-8.25
-investigadores.uncoma.edu.ar.txt 4 2
-extensiondigital.fpsico.unr.edu.ar.txt 26187 24170
-14978
+220971 27068
+443.72 187.21
+8.53
+rince.unlam.edu.ar.txt 0 0
+extensiondigital.fpsico.unr.edu.ar.txt 22395 7344
+17215

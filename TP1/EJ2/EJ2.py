@@ -5,70 +5,30 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # --------------- FUNCIONES --------------------
 
-# Contador de tokens
-def cantidad_tokens(texto, archivo_stopwords, minimo, maximo):
-    palabras = texto.split(" ")
-    tokens = []
-    for palabra in palabras:
-        if len(palabra) > maximo or len(palabra) < minimo:
-          return
-        else:
-          tokens.append(palabra)
-    return remover_stopwords(tokens, archivo_stopwords)
+def tokenizer(texto,stopwords, minimo, maximo):
+    texto = texto.lower() # Minusculas
 
+    tokens = re.findall(r"[a-záéíóúüñ]+", texto) #Solo letras con acento y ñ
 
-# Lee el texto y cuenta la cantidad de tokens
-def procesar_tokens(archivo, archivo_stopwords, minimo, maximo):
-    with open(archivo, "r", encoding="utf-8") as file:
-        texto = file.read()
-        return cantidad_tokens(texto, archivo_stopwords, minimo, maximo)
+    tokens_validos = []
+    for token in tokens:
+        
+        # Stopwords
+        if stopwords and token in stopwords:
+            continue
+        
+        # Minimo y maximo
+        if len(token) > maximo or len(token) < minimo:
+            continue
+        
+        tokens_validos.append(token)
 
+    return tokens_validos
 
-# Eliminacion de acentos a cada palabra
-def remover_acentos(palabra):
-    # Mapeo palabra con acento a sin acento (las 5 vocales)
-    mapeo_acentos = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u"}
-
-    # Reemplazo
-    for conAcento, sinAcento in mapeo_acentos.items():
-        palabra = palabra.replace(conAcento, sinAcento)
-    return palabra
-
-
-# Tokenizer: dado un texto, elimina minusculas, acentos y hace el split
-def tokenizer(texto, archivo_stopwords, minimo, maximo):
-    palabras = re.split(r"\W+", texto.lower().strip())  # Split y Minuscula
-    # \W : No palabra - + : Uno o mas
-
-    palabras = [remover_acentos(palabra) for palabra in palabras]  # Elimino acentos
-    palabras = [p for p in palabras if p] # Elimino vacios
-
-    validas = []
-    for palabra in palabras:
-        if len(palabra) > maximo or len(palabra) < minimo:
-          return
-        else:
-          validas.append(palabra)
-    validas = remover_stopwords(validas, archivo_stopwords)
-
-    return validas 
-
-
-# Lee el texto y aplica el tokenizar
-def procesar_documento(archivo, archivo_stopwords, minimo, maximo):
-    with open(archivo, "r", encoding="utf-8") as file:
-        texto = file.read()
-        return tokenizer(texto, archivo_stopwords, minimo, maximo)
-
-
-# Dado un archivo de stopwords, se eliminan todas las palabras vacias dentro de los terminos
-def remover_stopwords(terminos, archivo_stopwords):
-    if (not archivo_stopwords):
-        return
+def read_stopwords(archivo_stopwords):
     with open(archivo_stopwords, "r", encoding="utf-8") as file:
-        stopwords = set(file.read().splitlines())
-    return [termino for termino in terminos if termino not in stopwords]
-
+      stopwords = set(file.read().splitlines())
+    return stopwords
 
 # -----------------------------------------------------
 
@@ -110,15 +70,22 @@ def analizador_lexico(
         if archivo.endswith(".txt"):
             path = os.path.join(directorio, archivo)
 
+            with open(path, "r", encoding="utf-8") as file:
+              texto = file.read()
+            
+            stopwords = None
+            if (archivo_stopwords != None):
+              stopwords = read_stopwords(archivo_stopwords)
+
             # --------- ANALISIS LEXICO ---------------
 
-            tokens = procesar_tokens(path, archivo_stopwords, minimo, maximo)
-            terminos = procesar_documento(path , archivo_stopwords, minimo, maximo)
+            tokens = tokenizer(texto, stopwords, minimo, maximo)
+            terminos = set(tokens)
 
             contador_token += len(tokens)
 
             # Obtencion del documento mas largo y mas corto
-            contador_termino += len(set(terminos))
+            contador_termino += len(terminos)
 
             cantidad_tokens = len(tokens)
             cantidad_terminos = len(terminos)
@@ -193,6 +160,6 @@ if __name__ == "__main__":
     directorio = sys.argv[1]
     archivo_stopwords = sys.argv[2] if len(sys.argv) > 2 else None
 
-    analizador_lexico(directorio, archivo_stopwords, LONGITUD_MINIMA, LONGITUD_MAXIMA)
+    analizador_lexico(directorio, LONGITUD_MINIMA, LONGITUD_MAXIMA, archivo_stopwords)
 
     print("Analizador lexico realizado, archivos .txt exportados.")

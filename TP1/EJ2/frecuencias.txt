@@ -1,23 +1,23 @@
 Los 10 terminos mas frecuentes y su CF (Collection Frequency):
-universidad 2260
-nacional 1447
-facultad 1262
-2012 1248
-mas 1038
-ciencias 1036
-ar 1000
-2011 973
-edu 886
-educacion 877
+universidad 309
+nacional 297
+argentina 215
+ar 200
+edu 199
+información 176
+ciencias 164
+investigación 163
+facultad 159
+inicio 146
 
 Los 10 terminos menos frecuentes y su CF (Collection Frequency):
-tvradio 1
-universidadenlace 1
-impresoagenda21 1
-comunicacioneudem 1
-españolversion 1
+detectando 1
+neutralizando 1
+educativastrámite 1
+tracción 1
 saspi 1
+sspi 1
+sel 1
+ddb 1
 sistemasgcyt 1
-4f3d7b0ddb7c5 1
-3725 1
 target 1

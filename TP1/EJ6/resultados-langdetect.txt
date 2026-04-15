@@ -1,0 +1,5 @@
+Resultados - Distribucion de la frecuencia de las letras
+---- COMPARACION CON LA SOLUCION PROVISTA -------
+Líneas iguales: 297
+Total líneas: 300
+Porcentaje: 99.00%

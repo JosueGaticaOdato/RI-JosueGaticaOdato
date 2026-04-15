@@ -50,11 +50,49 @@ def identificar_idioma_linea(prueba):
               file.write(f"{i} {idioma}\n")
               print(f"Lineas analizadas hasta el momento: {i}/{len(lineas)}" )
 
+def comparar_archivos(path1, path2):
+    iguales = 0
+    total = 0
+    
+    with open(path1, "r", encoding="utf-8") as f1, open(path2, "r", encoding="utf-8") as f2:
+        for linea1, linea2 in zip(f1, f2):
+            total += 1
+
+            if linea1.strip().lower() == linea2.strip().lower():
+                iguales += 1
+
+    porcentaje = (iguales / total) * 100 if total > 0 else 0
+
+    return iguales, total, porcentaje
+
 # ----------------- MAIN -----------------------
 
 archivo_prueba = "test"
 archivo_langdetect = "langdetect"
+archivo_soluciones = "solution"
 
-print("Ejecutando identificador de idiomas (Basado en distribucion de letras)...")
+print("Ejecutando identificador de idiomas LangDetect...")
 identificar_idioma_linea(archivo_prueba)
 print("Archivo con soluciones exportado!")
+
+# ---------------- COMPARAR ACIERTOS ----------------
+
+#Soluciones
+iguales1, total1, porcentaje1 = comparar_archivos(nombre_soluciones, os.path.join(ruta, archivo_soluciones))
+
+with open("resultados-langdetect.txt", "w", encoding="utf-8") as resultados_file:
+    resultados_file.write(
+        f"Resultados - Distribucion de la frecuencia de las letras\n"
+    )
+    resultados_file.write(
+        f"---- COMPARACION CON LA SOLUCION PROVISTA -------\n"
+    )
+    resultados_file.write(
+        f"Líneas iguales: {iguales1}\n"
+    )
+    resultados_file.write(
+        f"Total líneas: {total1}\n"
+    )
+    resultados_file.write(
+        f"Porcentaje: {porcentaje1:.2f}%\n"
+    )

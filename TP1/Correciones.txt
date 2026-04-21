@@ -1,0 +1,20 @@
+Punto 1: OK
+
+Punto 2: Regular. Observaciones: (1) Incorpora encabezados en frecuencias.txt, cuando no debería; (2) Reporta CF y DF como el mismo valor.
+
+Punto 3: OK. Observación: (1) considerar que la elección de la longitud máxima de término (23), puede no ser suficiente para algunas entidades (ej: "https://drive.google.com", cuya longitud es 24).
+
+Punto 4: OK
+
+Punto 5: OK. Observación: cuidado con la afirmación de que Lancaster es un enfoque "brusco'', ya que puede prestarse a interpretaciones ambiguas (de todas formas, se entiende que se refiere a "agresivas").
+
+Punto 6: Regular. No queda claro a qué hace referencia la sección "comparación con langdetect" en cada método.
+
+Punto 7: OK
+
+Punto 8: OK. Ver observación general.
+
+Punto 9: OK
+
+Observaciones generales:
+GENERALES: es necesario incorporar métricas que indiquen qué tan bueno es el ajuste del modelo a los datos. Punto 8: el enunciado admite dos interpretaciones posibles, los estudiantes "dividieron" su resolución entre estas: A. "¿Cuántos términos cubre X% del corpus" (basado en frecuencia acumulada)?" Ej.: Herrneder, Iarza, Juarez. B. Top X% de términos únicos del ranking (según Zipf). Ej.: Gatica, Latessa, Rueda.

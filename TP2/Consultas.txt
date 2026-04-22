@@ -1,0 +1,18 @@
+EJ4:
+
+- Como saco la necesidad de informacion y las querys
+- Que es lo esperado para la correlacion?
+- Esta bien con esos resultados?
+- El nivel de analisis de cada Query esta bien?
+
+EJ5 (sin hacer)
+
+EJ6:
+
+- Calculo DCG,IDCG, NDCG
+
+EJ7 (en proceso)
+
+EJ8:
+
+- Precision media de intervalos de Recall

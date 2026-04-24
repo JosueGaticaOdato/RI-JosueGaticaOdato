@@ -1,4 +1,4 @@
-EJ4:
+EJ4 X
 
 - Como saco la necesidad de informacion y las querys
 - Que es lo esperado para la correlacion?
@@ -7,7 +7,7 @@ EJ4:
 
 EJ5 (sin hacer)
 
-EJ6:
+EJ6 x
 
 - Calculo DCG,IDCG,NDCG
 

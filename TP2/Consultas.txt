@@ -9,10 +9,10 @@ EJ5 (sin hacer)
 
 EJ6:
 
-- Calculo DCG,IDCG, NDCG
+- Calculo DCG,IDCG,NDCG
 
 EJ7 (en proceso)
 
 EJ8:
 
-- Precision media de intervalos de Recall
+X Precision media de intervalos de Recall 

@@ -8,7 +8,7 @@ Punto 4: OK
 
 Punto 5: OK. Observación: cuidado con la afirmación de que Lancaster es un enfoque "brusco'', ya que puede prestarse a interpretaciones ambiguas (de todas formas, se entiende que se refiere a "agresivas").
 
-Punto 6: Regular. No queda claro a qué hace referencia la sección "comparación con langdetect" en cada método.
+Punto 6: Regular. No queda claro a qué hace referencia la sección "comparación con langdetect" en cada método -> Solucion: Especificar que metrica se uso y elimiinar langdetect
 
 Punto 7: OK
 

@@ -1,0 +1,15 @@
+Punto 1: OK. Observación: verifique si la noción de "más o menos relevantes que otros" aplica en el modelo booleano.
+
+Punto 2: Revisar. Los cálculos de producto escalar son correctos; sin embargo, debe revisar cómo computa la norma de los vectores la similitud del coseno. Revise también el TF para el término "comunicación".
+
+Punto 3: Revisar. Misma observación que para el punto 2. Bien la indicación de la metodología utilizada.
+
+Punto 4: Revisar: ¿el cálculo de Spearman es consistente con el sugerido en la bibliografía MIR? ¿Cómo se comporta el método utilizado si hay poco solapamiento de listas?
+
+Punto 5: OK. Observaciones: (1) En general, el vocabulario no contiene las postings: vocabulario[term] = {"df": 0, "postings": []}. (2) Puede utilizar correlación para verificar si su ranking es consistente con el de Terrier.
+
+Punto 6
+
+Punto 7: OK. Observación: para futuros gráficos, debe indicar el nombre de lo que representa cada eje.
+
+Punto 8: OK. Observaciones: (1) Si bien los cálculos son correctos y, además, realiza un buen análisis query a query, la consigna solicita el cómputo de las métricas consolidadas por sistema (es decir, computando el MAP de las 3 queries para cada sistema). (2) ¿En qué caso convendría utilizar los sistemas B o C?

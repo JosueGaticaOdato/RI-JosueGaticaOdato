@@ -1,0 +1,5 @@
+Punto 1: OK. Observación: las consultas 1 y 2, tanto sin suavizado como aplicando JM son correctas. Sin embargo, debe revisar la consulta 3 (verifique qué alternativa tiene cuando hay términos que no están presentes en la colección). 
+
+Punto 2: Regular. Observaciones: (1) Utiliza μ=1000 y menciona que es un valor sugerido por la literatura. Verifique esta afirmación. (2) Al igual que en el punto 1, verifique qué alternativa tiene cuando hay términos que no están presentes en la colección.
+
+Punto 3: Regular. ¿La asignación del parámetro {"c":0.7} funciona cómo se espera en jm = pt.terrier.Retriever(index, wmodel="Hiemstra_LM", controls={"c": 0.7})? Considere que la recomendación en la notebook de ejemplo es mediante controls={"hiemstra_lm.lambda": 0.9}. Además, en la distribución por queries muestra la métrica MAP, pero no es lo que se pide.

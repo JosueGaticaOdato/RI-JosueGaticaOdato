@@ -8,7 +8,8 @@ import os
 import pickle
 import re
 import struct
-from typing import ClassVar, Iterable, Tuple
+import time
+from typing import ClassVar, Tuple
 
 # ----------- CONSTANTES GLOBALES -----------------
 
@@ -18,17 +19,13 @@ RECORD_SIZE   =   12        # Bytes por registro. 3 * 4 (termID, docID, freq)
 FMT_RECORD    =   ">3I"     # termID, docID, freq
 FMT_POSTING   =   ">2I"     # docID, freq
 
-# --------------  TOKENIZER -------------------
+# ------  FUNCIONES (TOKENIZER, WRITER-CHUNK, ETC. ) -------------
 
 def tokenizer(texto, stopwords=None, minimo=1, maximo=float("inf")):
   """
   Tokenizer que pasa todo a minuscula y se queda con letras con acento y ñ
 
-  Args:
-      texto
-      stopwords
-      minimo
-      maximo
+  Args: texto, stopwords, minimo, maximo
 
   Returns:
       tokens
@@ -56,11 +53,9 @@ def parse_document(path):
   """
   Dado un path, abro el archivo y aplico el tokenizer
 
-  Args:
-      path
+  Args: path
 
-  Returns:
-      tokens
+  Returns: tokens
   """
   with open(path, "r", encoding="utf-8", errors="ignore") as f:
     return tokenizer(f.read())
@@ -93,7 +88,7 @@ def write_chunk(partial_tuples, chunk_path):
   with open(chunk_path, "wb") as f:
     if flat:
       f.write(struct.pack(f">{len(flat)}I", *flat))
-  
+
 # --------------  PostingChunk  -------------------
 
 @dataclass
@@ -164,7 +159,7 @@ class PostingChunk:
 
 # --------------  1. BSBI - INDEX  -------------------
 
-def bsbi_indexBuilder(corpus, memoryLimit, index_root_path, index_name):
+def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
   """
   BSBI - Index
 
@@ -182,6 +177,7 @@ def bsbi_indexBuilder(corpus, memoryLimit, index_root_path, index_name):
 
   # INICIALIZACIÓN
   term2id        = {}     # palabra → ID numérico
+  doc_map        = {}
   max_term_id    = 0      # contador de IDs únicos
   memory_counter = 0      # docs en memoria actual
   partial_tuples = []     # lista de (term_id, docid, freq)
@@ -197,12 +193,22 @@ def bsbi_indexBuilder(corpus, memoryLimit, index_root_path, index_name):
     nonlocal partial_tuples, memory_counter, chunk_id
     chunk_path = os.path.join(index_root_path, f"chunk{chunk_id}.bin")
     write_chunk(partial_tuples, chunk_path)
+    print(f"chunk {chunk_id:04d} volcado "
+      f"({memory_counter} docs, {len(partial_tuples)} tuplas)")
     chunk_id += 1
     partial_tuples = []
     memory_counter = 0
 
+  print("\n" + "=" * 55)
+  print("Comienzo del algoritmo BSBI")
+  print(f"Colección: {len(corpus)} documentos - volcado cada {memoryLimit} docs")
+  print("=" * 55 + "\n")
+
+  t0 = time.perf_counter()
+
   # PARA CADA (docid, documento) en corpus:
   for docid, documento in _iter_corpus(corpus):
+    doc_map[docid] = documento
 
     # Paso 1: frecuencias por termino en este documento
     term_freq_in_doc = {}
@@ -227,18 +233,28 @@ def bsbi_indexBuilder(corpus, memoryLimit, index_root_path, index_name):
   if partial_tuples:
     flush_chunk()
 
+  time_index = time.perf_counter() - t0
   index_path = os.path.join(index_root_path, f"{index_name}.bin")
   vocab_path = os.path.join(index_root_path, f"{index_name}_vocab.pkl")
 
   # Merge
+  t0 = time.perf_counter()
   vocabulary = bsbi_merge(term2id, chunk_id, index_root_path, index_path, vocab_path)
+  time_merge = time.perf_counter() - t0
+
+  print("\n" + "=" * 55)
+  print("  FIN del allgortimo BSBI")
+  print("=" * 55)
 
   return {
     "term2id": term2id,
     "vocabulary": vocabulary,
+    "doc_map"   : doc_map,
     "chunk_count": chunk_id,
     "index_path": index_path,
     "vocab_path": vocab_path,
+    "time_index": time_index,
+    "time_merge": time_merge
   }
 
 
@@ -321,23 +337,49 @@ def build_index(collection_path: str,
     for docid, archivo in enumerate(archivos, start=1)
   ]
 
+
   # Construccion del indice con merge
-  resultado = bsbi_indexBuilder(
+  resultado = bsbi_index(
     corpus=corpus,
     memoryLimit=n,
     index_root_path=chunks_dir,
     index_name=index_name
   )
 
-  print("Coleccion:")
-  for docid, path in corpus:
-    print(f"  docID={docid}: {os.path.basename(path)}")
+  # ----------- RESULTADOS ------------
+  col_size   = sum(
+    os.path.getsize(os.path.join(collection_path, f))
+    for f in os.listdir(collection_path)
+    if not f.startswith(".")
+  )
+  idx_size   = os.path.getsize(resultado["index_path"])  if os.path.exists(resultado["index_path"])  else 0
+  vocab_size = os.path.getsize(resultado["vocab_path"])  if os.path.exists(resultado["vocab_path"])  else 0
+  total_idx  = idx_size + vocab_size
 
-  print("\nResultado:")
-  print(f"  chunks      : {resultado['chunk_count']}")
-  print(f"  indice      : {resultado['index_path']}")
-  print(f"  vocabulario : {resultado['vocab_path']}")
-  print(f"  terminos    : {len(resultado['vocabulary'])}")
+  overhead = total_idx / col_size if col_size > 0 else 0.0
+
+  time_index = resultado["time_index"]
+  time_merge = resultado["time_merge"]
+  vocabulary = resultado["vocabulary"]
+  chunk_count = resultado["chunk_count"]
+  doc_map = resultado["doc_map"]
+
+  print("\n" + "=" * 55)
+  print("  RESULTADOS")
+  print("=" * 55)
+  print(f"  Colección           : {col_size/1024:.1f} KB")
+  print(f"  Índice binario      : {idx_size/1024:.1f} KB")
+  print(f"  Vocabulario (pickle): {vocab_size/1024:.1f} KB")
+  print(f"  Total índice        : {total_idx/1024:.1f} KB")
+  print(f"  Overhead (idx/col)  : {overhead:.4f}  ({overhead*100:.1f}%)")
+  print(f"  Tiempo indexación   : {time_index:.4f} s")
+  print(f"  Tiempo merge        : {time_merge:.4f} s")
+  print(f"  Tiempo total        : {time_index+time_merge:.4f} s")
+  print(f"  Términos (vocab)    : {len(vocabulary)}")
+  print(f"  Documentos          : {len(doc_map)}")
+  print(f"  Chunks generados    : {chunk_count}")
+  print("=" * 55)
+
 
   return resultado
 
@@ -347,7 +389,7 @@ if __name__ == "__main__":
         description="BSBI Indexer"
     )
     parser.add_argument("collection",
-                        help="Directorio con los documentos .txt")
+                        help="Directorio con los documentos")
     parser.add_argument("-n", "--block-size", type=int, default=10,
                         help="Documentos por bloque (volcado a disco)")
     parser.add_argument("--index-dir",  default="index",

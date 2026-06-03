@@ -65,6 +65,8 @@ def mostrar_posting(term, posting):
         DocName:docID:Frecuencia
     """
     print(f"\nPosting list del término '{term}' (df={len(posting)}):")
+    print(f"Formato: DocName:docID:Frecuencia")
+    
     print("-" * 50)
     for doc_name, docid, freq in posting:
         print(f"{doc_name}:{docid}:{freq}")

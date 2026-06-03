@@ -2,7 +2,7 @@
 Implementacion BSBI
 """
 
-import argparse
+import shutil
 from dataclasses import dataclass, field
 import os
 import pickle
@@ -21,39 +21,56 @@ RECORD_SIZE   =   12        # Bytes por registro. 3 * 4 (termID, docID, freq)
 FMT_RECORD    =   ">3I"     # termID, docID, freq
 FMT_POSTING   =   ">2I"     # docID, freq
 
-# ------  FUNCIONES (TOKENIZER, WRITER-CHUNK, ETC. ) -------------
+# ----------  FUNCIONES (TOKENIZER, WRITER-CHUNK, ETC. ) -------------
 
-def tokenizer(texto, stopwords=None, minimo=1, maximo=float("inf")):
-  """
-  Tokenizer que pasa todo a minuscula y se queda con letras con acento y ñ
+# ----------- TOKENIZER (TP2-EJ5) --------------------
 
-  Args: texto, stopwords, minimo, maximo
+token_especificos = [
+    ('EMAIL', r"[a-zA-Z0-9][a-zA-Z0-9._%+\-]*@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"),
+    ('URL', r'(?:https?|ftps?)://[^\s<>"\'`]+'), 
+    ('ABBREV_MULTI', r"(?:[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{1,4}\.){1,}[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{1,4}\.?"), # Abreviaturas S.A. o U.S.A.
+    ('ABBREV', r"[A-Za-záéíóúüñÁÉÍÓÚÜÑ]{2,10}\."), # Abreviaturas Dr., Lic.
+    ('PHONE', r"[+\-]?\d[\d.,\-]*(?:%|°)?"), # Telefonos
+    ('NUMBER', r'\d+(?:[.,]\d+)*'),
+    ('FECHA', r"\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{4}"),
+    ('PROPER_NOUN', r"(?:[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+)(?:\s+(?!Sra\b|Sr\b|Dr\b)[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]+)+"), # Nombres propios, con varias palabras con mayúscula
+    ('WORD', r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ]{2,}"),
+    ('PUNCT', r'[¡!¿?.,;:]'),
+    ('SIGLA', r"[A-ZÁÉÍÓÚÜÑ]{2,}")
+]
 
-  Returns:
-      tokens
-  """
-  texto = texto.lower() # Minusculas
+def tokenizer(texto,stopwords = None, minimo = 2, maximo =float('inf')):
+    """
+    Tokenizer que pasa todo a minuscula y se queda con letras con acento y ñ (es el mismo que el TP1)
 
-  tokens = re.findall(r"[a-záéíóúüñ]+", texto) #Solo letras con acento y ñ
+    Args: texto, stopwords, minimo, maximo
 
-  tokens_validos = []
-  for token in tokens:
-      
-      # Stopwords
-      if stopwords and token in stopwords:
-          continue
-      
-      # Minimo y maximo
-      if len(token) > maximo or len(token) < minimo:
-          continue
-      
-      tokens_validos.append(token)
+    Returns:
+        tokens
+    """
+    tok_regex = '|'.join(f'(?P<{name}>{regex})' for name, regex in token_especificos)
+    
+    tokens = []
+    
+    for match in re.finditer(tok_regex, texto):
+        kind = match.lastgroup
+        value = match.group().strip()
 
-  return tokens_validos
+        # Stopwords
+        if stopwords and value in stopwords:
+            continue
+        
+        # Minimo y maximo
+        if len(value) > maximo or len(value) < minimo:
+            continue
+        
+        tokens.append(value)
+    
+    return tokens
 
 def parse_document(path):
   """
-  Dado un path, abro el archivo y aplico el tokenizer
+  Dado un path, abro el archivo y lo leo
 
   Args: path
 
@@ -246,22 +263,28 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
 
   os.makedirs(index_root_path, exist_ok=True)
 
+  # Creo carpeta de chunks
+  chunks_dir = os.path.join(index_root_path, "chunks")
+  os.makedirs(chunks_dir, exist_ok=True)
+
   # Volcado del chunk a disco
   def flush_chunk():
-    nonlocal partial_tuples, memory_counter, chunk_id
-    chunk_path = os.path.join(index_root_path, f"chunk{chunk_id}.bin")
+    nonlocal partial_tuples, memory_counter, chunk_id, chunks_dir
+
+    chunk_path = os.path.join(chunks_dir, f"chunk{chunk_id}.bin")
+
     write_chunk(partial_tuples, chunk_path)
-    # print(f"  chunk {chunk_id:04d} volcado "
-    #   f"({memory_counter} docs, {partial_tuples})")
-    print(f"  chunk {chunk_id:04d} volcado "
-      f"({memory_counter} docs)")
+    
+    #print(f"  chunk {chunk_id:04d} volcado "
+    #  f"({memory_counter} docs)")
+    
     chunk_id += 1
     partial_tuples = []
     memory_counter = 0
 
   print("\n" + "=" * 55)
   print("  COMIENZO ALGORITMO BSBI")
-  print(f"  Colección: {len(corpus)} documentos - volcado cada {memoryLimit} docs")
+  print(f"  Colección: {len(corpus)} documentos - volcado cada {memoryLimit} documentos")
   print("=" * 55 + "\n")
 
   t0 = time.perf_counter()
@@ -269,7 +292,7 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
   # PARA CADA (docid, documento) en corpus:
   for docid, documento in _iter_corpus(corpus):
     #print(f"  Procesando docID={docid}")
-    doc_map[docid] = documento
+    doc_map[docid] =  os.path.splitext(os.path.basename(documento))[0] # Solo nombre del doc
 
     # Paso 1: frecuencias por termino en este documento
     term_freq_in_doc = {}
@@ -304,6 +327,10 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
   vocabulary = bsbi_merge(term2id, chunk_id, index_root_path, index_path, doc_map, vocab_path, docmap_path)
   time_merge = time.perf_counter() - t0
 
+  # Borro los chunks
+  if os.path.exists(chunks_dir):
+    shutil.rmtree(chunks_dir)
+
   print("\n" + "=" * 55)
   print("  FIN del allgortimo BSBI")
   print("=" * 55)
@@ -319,7 +346,6 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
     "time_merge": time_merge
   }
 
-
 # --------------  2. BSBI - MERGE  -------------------
 
 def bsbi_merge(term2id, chunk_count, index_root_path, index_path, doc_map, vocab_path, docmap_path):
@@ -331,7 +357,8 @@ def bsbi_merge(term2id, chunk_count, index_root_path, index_path, doc_map, vocab
 
   # Punteros a cada chunk
   for i in range(chunk_count):
-    chunk_path = os.path.join(index_root_path, f"chunk{i}.bin")
+    chunks_dir = os.path.join(index_root_path, "chunks")
+    chunk_path = os.path.join(chunks_dir, f"chunk{i}.bin")
     if os.path.exists(chunk_path) and os.path.getsize(chunk_path) > 0:
       chunks.append(PostingChunk(chunk_path=chunk_path, chunk_id=i))
 
@@ -399,6 +426,7 @@ def build_index(collection_path: str,
   #   for archivo in os.listdir(collection_path)
   # )
 
+  print("Procesando coleccion...")
   archivos = sorted(process_wiki_collection(collection_path))
 
   corpus = [
@@ -424,13 +452,19 @@ def build_index(collection_path: str,
   vocab_size = os.path.getsize(resultado["vocab_path"])  if os.path.exists(resultado["vocab_path"])  else 0
   total_idx  = idx_size + vocab_size
 
-  overhead = total_idx / col_size if col_size > 0 else 0.0
+  #overhead = total_idx / col_size if col_size > 0 else 0.0
 
   time_index = resultado["time_index"]
   time_merge = resultado["time_merge"]
   vocabulary = resultado["vocabulary"]
   chunk_count = resultado["chunk_count"]
   doc_map = resultado["doc_map"]
+
+  resultado["col_size"] = col_size
+  resultado["idx_size"] = idx_size
+  resultado["vocab_size"] = vocab_size
+  resultado["total_idx"] = total_idx
+  #resultado["overhead"] = overhead
 
   print("\n" + "=" * 55)
   print("  RESULTADOS")
@@ -439,7 +473,7 @@ def build_index(collection_path: str,
   print(f"  Índice binario      : {idx_size/1024:.1f} KB")
   print(f"  Vocabulario (pickle): {vocab_size/1024:.1f} KB")
   print(f"  Total índice        : {total_idx/1024:.1f} KB")
-  print(f"  Overhead (idx/col)  : {overhead:.4f}  ({overhead*100:.1f}%)")
+  #print(f"  Overhead (idx/col)  : {overhead:.4f}  ({overhead*100:.1f}%)")
   print(f"  Tiempo indexación   : {time_index:.4f} s")
   print(f"  Tiempo merge        : {time_merge:.4f} s")
   print(f"  Tiempo total        : {time_index+time_merge:.4f} s")

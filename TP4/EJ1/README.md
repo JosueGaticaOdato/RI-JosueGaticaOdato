@@ -10,12 +10,17 @@ python TP4/EJ1/EJ1.py TP4/EJ1/coleccion_debug -n 4 --index-dir TP4/EJ1/index_deb
 
 ## Ejecucion con coleccion de Snapshot de Wikipedia (Test)
 ```bash
-python TP4/EJ1/EJ1.py TP4/Colecciones/test -n 2 --index-dir TP4/EJ1/index_test --index-name index_test
+python TP4/EJ1/EJ1.py TP4/Colecciones/test -n 4 --index-dir TP4/EJ1/index_test --index-name index_test
 ```
 
-## Ejecucion con coleccion de Snapshot de Wikipedia
+## Ejecucion con coleccion de Snapshot de Wikipedia (debug)
 ```bash
-python TP4/EJ1/EJ1.py TP4/Colecciones/en/articles -n 10 --index-dir TP4/index --index-name index
+python TP4/EJ1/EJ1.py TP4/Colecciones/wiki-small/en/articles -n 300000 --index-dir TP4/index-small --index-name index-small
+```
+
+## Ejecucion con coleccion de Snapshot de Wikipedia (run)
+```bash
+python TP4/EJ1/EJ1.py TP4/Colecciones/wiki-large/en/articles -n 100 --index-dir TP4/index-large --index-name index-large
 ```
 
 # 1.1
@@ -33,10 +38,17 @@ python TP4/EJ1/EJ1-Posting.py casa --index-dir TP4/EJ1/index_debug --index-name 
 
 ## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (Test)
 ```bash
-python TP4/EJ1/EJ1-Posting.py Wikipedia --index-dir TP4/EJ1/index_test --index-name index_test
+python TP4/EJ1/EJ1-Posting.py encyclopedia --index-dir TP4/EJ1/index_test --index-name index_test
 ```
 
-## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia
+## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (small)
 ```bash
-python TP4/EJ1/EJ1-Posting.py Wikipedia --index-dir TP4/EJ1/index --index-name index
+python TP4/EJ1/EJ1-Posting.py encyclopedia --index-dir TP4/index-small --index-name index-small
+python TP4/EJ1/EJ1-Posting.py spirit --index-dir TP4/index-small --index-name index-small
+```
+
+## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (run)
+```bash
+python TP4/EJ1/EJ1-Posting.py encyclopedia --index-dir TP4/index-run --index-name index-run
+python TP4/EJ1/EJ1-Posting.py spirit --index-dir TP4/index-run --index-name index-run
 ```

@@ -9,9 +9,21 @@ Su script debe permitir el procesamiento de consultas del tipo:
 Como salida su script debe retornar el nombre y el docID de los documentos que satisfacen la consulta.
 
 ## Prueba con coleccion vista en clase
+
 ```bash
 python TP4/EJ2/EJ2.py "((casa AND perro) OR casa)" --index-dir TP4/EJ1/index_debug --index-name index_debug
 python TP4/EJ2/EJ2.py "(casa AND auto)" --index-dir TP4/EJ1/index_debug --index-name index_debug
 python TP4/EJ2/EJ2.py "((casa AND auto) OR gato)" --index-dir TP4/EJ1/index_debug --index-name index_debug
 ```
 
+## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (small)
+```bash
+python TP4/EJ2/EJ2.py "((spirit AND encyclopedia) AND article)" --index-dir TP4/index-small --index-name index-small
+python TP4/EJ2/EJ2.py "((spirit AND NOT encyclopedia) OR NOT article))" --index-dir TP4/index-small --index-name index-small
+```
+
+## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (run)
+```bash
+python TP4/EJ2/EJ2.py "((spirit AND encyclopedia) OR article)" --index-dir TP4/index-run --index-name index-run
+python TP4/EJ2/EJ2.py "((spirit AND NOT encyclopedia) OR NOT article))" --index-dir TP4/index-run --index-name index-run
+```

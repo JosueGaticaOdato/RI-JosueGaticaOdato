@@ -11,6 +11,8 @@ import struct
 import time
 from typing import ClassVar, Tuple
 
+from bs4 import BeautifulSoup
+
 # ----------- CONSTANTES GLOBALES -----------------
 
 LEN_POSTING   =   8         # 4 bytes para docID, 4 bytes para freq (2 * 4)
@@ -58,15 +60,43 @@ def parse_document(path):
   Returns: tokens
   """
   with open(path, "r", encoding="utf-8", errors="ignore") as f:
-    return tokenizer(f.read())
+    return f.read()
+
+# def _tokens_from_document(documento):
+#   "Normaliza un documento a una lista de tokens."
+#   if isinstance(documento, str):
+#     if os.path.exists(documento):
+#       return parse_document(documento)
+#     return tokenizer(documento)
+#   return list(documento)
 
 def _tokens_from_document(documento):
-  "Normaliza un documento a una lista de tokens."
-  if isinstance(documento, str):
-    if os.path.exists(documento):
-      return parse_document(documento)
-    return tokenizer(documento)
-  return list(documento)
+    "Normaliza un documento a una lista de tokens."
+    #print(documento)
+
+    # Caso 1: es un string
+    if isinstance(documento, str):
+
+        if os.path.exists(documento):
+
+            # Detectar tipo por extensión
+            if documento.endswith(".html"):
+                text = extract_text_from_html(documento)
+
+            elif documento.endswith(".txt"):
+                text = parse_document(documento)
+
+            else:
+                # fallback (por si aparece otro formato)
+                text = parse_document(documento)
+
+            return tokenizer(text)
+
+        # Si es texto directo
+        return tokenizer(documento)
+
+    # Caso 2: ya es iterable de tokens
+    return list(documento)
 
 def _iter_corpus(corpus):
   "Permite recibir corpus como [(docid, doc), ...] o como [doc, ...]."
@@ -88,6 +118,42 @@ def write_chunk(partial_tuples, chunk_path):
   with open(chunk_path, "wb") as f:
     if flat:
       f.write(struct.pack(f">{len(flat)}I", *flat))
+
+# -------------- Wiki-Small procesamiento  -------------------
+
+def extract_text_from_html(filepath:str):
+  with open(filepath, "r", encoding="utf-8") as file:
+    soup = BeautifulSoup(file,"html.parser")
+    return soup.get_text(separator=" ", strip= True)
+
+def process_wiki_collection(root_dir: str) -> dict:
+    documents = {}
+
+    for dirpath, _, filenames in os.walk(root_dir):
+        for filename in filenames:
+
+            full_path = os.path.join(dirpath, filename)
+            relative_path = os.path.relpath(full_path, root_dir)
+
+            try:
+                # CASO HTML
+                if filename.endswith(".html"):
+                    text = extract_text_from_html(full_path)
+
+                # CASO TXT
+                elif filename.endswith(".txt"):
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        text = f.read()
+
+                else:
+                    continue
+
+                documents[relative_path] = text
+
+            except Exception as e:
+                print(f"Error leyendo {full_path}: {e}")
+
+    return documents
 
 # --------------  PostingChunk  -------------------
 
@@ -193,15 +259,15 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
     nonlocal partial_tuples, memory_counter, chunk_id
     chunk_path = os.path.join(index_root_path, f"chunk{chunk_id}.bin")
     write_chunk(partial_tuples, chunk_path)
-    print(f"chunk {chunk_id:04d} volcado "
-      f"({memory_counter} docs, {len(partial_tuples)} tuplas)")
+    print(f"  chunk {chunk_id:04d} volcado "
+      f"({memory_counter} docs, {partial_tuples})")
     chunk_id += 1
     partial_tuples = []
     memory_counter = 0
 
   print("\n" + "=" * 55)
-  print("Comienzo del algoritmo BSBI")
-  print(f"Colección: {len(corpus)} documentos - volcado cada {memoryLimit} docs")
+  print("  COMIENZO ALGORITMO BSBI")
+  print(f"  Colección: {len(corpus)} documentos - volcado cada {memoryLimit} docs")
   print("=" * 55 + "\n")
 
   t0 = time.perf_counter()
@@ -225,8 +291,8 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
 
     memory_counter += 1
 
-    # Paso 3: limite de memoria alcanzado -> volcar chunk a disco
-    if memory_counter >= memoryLimit:
+    # Paso 3: limite de memoria alcanzado, entonces volcar chunk a disco
+    if len(partial_tuples) >= memoryLimit:
       flush_chunk()
 
   # Volcado del ultimo bloque (puede quedar sin llegar al limite)
@@ -299,7 +365,7 @@ def bsbi_merge(term2id, chunk_count, index_root_path, index_path, vocab_path):
 
           term = id2term[term_id_actual]
           df = len(posting_list)
-          vocabulary[term] = [seek_actual, df, term_id_actual]
+          vocabulary[term] = [df, seek_actual]
           seek_actual += df * LEN_POSTING
 
     # Guardar vocabulario como pickle
@@ -326,17 +392,22 @@ def build_index(collection_path: str,
   """
   os.makedirs(chunks_dir, exist_ok=True)
 
-  archivos = sorted(
-    archivo
-    for archivo in os.listdir(collection_path)
-    if archivo.endswith(".txt")
-  )
+  # archivos = sorted(
+  #   archivo
+  #   for archivo in os.listdir(collection_path)
+  # )
+
+  archivos = sorted(process_wiki_collection(collection_path))
 
   corpus = [
     (docid, os.path.join(collection_path, archivo))
     for docid, archivo in enumerate(archivos, start=1)
   ]
 
+  print("collection_path", collection_path)
+  print("archivos", archivos)
+  print("corpus", corpus)
+  
 
   # Construccion del indice con merge
   resultado = bsbi_index(
@@ -378,7 +449,21 @@ def build_index(collection_path: str,
   print(f"  Términos (vocab)    : {len(vocabulary)}")
   print(f"  Documentos          : {len(doc_map)}")
   print(f"  Chunks generados    : {chunk_count}")
+  print("\n" + "=" * 55)
+  print("  VOCABULARIO ---> 'termino': df, seek")
+  print("=" * 55 + "\n")
+  print(vocabulary)
+  print("\n" + "=" * 55)
+  print("  POSTING ---> termID:(docID,TF)")
   print("=" * 55)
+  with open(resultado["index_path"], "rb") as f:
+    for termino, (df, seek) in vocabulary.items():
+        f.seek(seek)
+        raw = f.read(df * LEN_POSTING)
+        valores = struct.unpack(f">{df * 2}I", raw)
+        postings = list(zip(valores[0::2], valores[1::2]))
+        print(termino, postings)
+  print("\n" + "=" * 55)
 
 
   return resultado

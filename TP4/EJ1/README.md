@@ -15,7 +15,7 @@ python TP4/EJ1/EJ1.py TP4/Colecciones/test -n 2 --index-dir TP4/EJ1/index_test -
 
 ## Ejecucion con coleccion de Snapshot de Wikipedia
 ```bash
-python TP4/EJ1/EJ1.py TP4/Colecciones/en/articles -n 10 --index-dir TP4/EJ1/index --index-name index
+python TP4/EJ1/EJ1.py TP4/Colecciones/en/articles -n 10 --index-dir TP4/index --index-name index
 ```
 
 # 1.1

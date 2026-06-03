@@ -268,7 +268,7 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
 
   # PARA CADA (docid, documento) en corpus:
   for docid, documento in _iter_corpus(corpus):
-    print(f"  Procesando docID={docid}")
+    #print(f"  Procesando docID={docid}")
     doc_map[docid] = documento
 
     # Paso 1: frecuencias por termino en este documento
@@ -337,6 +337,8 @@ def bsbi_merge(term2id, chunk_count, index_root_path, index_path, doc_map, vocab
 
   vocabulary = {}
   seek_actual = 0
+
+  print(f"  Merge en proceso...")
 
   try:
     with open(index_path, "wb") as index_file:

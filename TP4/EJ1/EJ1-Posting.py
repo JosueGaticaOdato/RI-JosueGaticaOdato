@@ -6,7 +6,7 @@ import argparse
 import os
 import pickle
 import struct
-from BSBI import LEN_POSTING, build_index
+from BSBI import LEN_POSTING
 
 # --------------  FUNCIONES  -------------------
 
@@ -27,7 +27,7 @@ def recuperar_posting(term, vocabulario, doc_map, index_path):
     Recupera la posting list completa de un término.
 
     Proceso:
-      1. vocabulary[term] → [seek, df, term_id]   O(1)
+      1. vocabulary[term] → [df,seek]   O(1)
       2. file.seek(seek)
       3. Leer df × LEN_POSTING bytes
       4. struct.unpack → tupla de enteros

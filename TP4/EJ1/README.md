@@ -5,12 +5,17 @@ Codifique un script que indexe una colección que requiera el volcado parcial a 
 
 ## Prueba con coleccion vista en clase
 ```bash
-python TP4/EJ1/BSBI.py TP4/EJ1/coleccion_debug -n 4 --chunks-dir chunks_debug --index-name indice_debug
+python TP4/EJ1/EJ1.py TP4/EJ1/coleccion_debug -n 4 --index-dir TP4/EJ1/index_debug --index-name index_debug
+```
+
+## Ejecucion con coleccion de Snapshot de Wikipedia (Test)
+```bash
+python TP4/EJ1/EJ1.py TP4/Colecciones/test -n 2 --index-dir TP4/EJ1/index_test --index-name index_test
 ```
 
 ## Ejecucion con coleccion de Snapshot de Wikipedia
 ```bash
-python TP4/EJ1/BSBI.py TP4/EJ1/coleccion_debug -n 2 --chunks-dir chunks_debug --index-name indice_debug
+python TP4/EJ1/EJ1.py TP4/Colecciones/en/articles -n 10 --index-dir TP4/EJ1/index --index-name index
 ```
 
 # 1.1
@@ -20,3 +25,18 @@ Agregue un script que cargue el vocabulario de la colección en memoria, permita
 DocName:docID:Frecuencia
 
 Utilice la colección de debug para calibrar su script y verificar que la salida sea correcta.
+
+## Ejecucicion del script con el indice de la coleccion vista en clase
+```bash
+python TP4/EJ1/EJ1-Posting.py casa --index-dir TP4/EJ1/index_debug --index-name index_debug
+```
+
+## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (Test)
+```bash
+python TP4/EJ1/EJ1-Posting.py Wikipedia --index-dir TP4/EJ1/index_test --index-name index_test
+```
+
+## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia
+```bash
+python TP4/EJ1/EJ1-Posting.py Wikipedia --index-dir TP4/EJ1/index --index-name index
+```

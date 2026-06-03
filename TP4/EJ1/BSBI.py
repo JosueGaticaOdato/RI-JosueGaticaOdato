@@ -62,14 +62,6 @@ def parse_document(path):
   with open(path, "r", encoding="utf-8", errors="ignore") as f:
     return f.read()
 
-# def _tokens_from_document(documento):
-#   "Normaliza un documento a una lista de tokens."
-#   if isinstance(documento, str):
-#     if os.path.exists(documento):
-#       return parse_document(documento)
-#     return tokenizer(documento)
-#   return list(documento)
-
 def _tokens_from_document(documento):
     "Normaliza un documento a una lista de tokens."
     #print(documento)
@@ -259,8 +251,10 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
     nonlocal partial_tuples, memory_counter, chunk_id
     chunk_path = os.path.join(index_root_path, f"chunk{chunk_id}.bin")
     write_chunk(partial_tuples, chunk_path)
+    # print(f"  chunk {chunk_id:04d} volcado "
+    #   f"({memory_counter} docs, {partial_tuples})")
     print(f"  chunk {chunk_id:04d} volcado "
-      f"({memory_counter} docs, {partial_tuples})")
+      f"({memory_counter} docs)")
     chunk_id += 1
     partial_tuples = []
     memory_counter = 0
@@ -274,6 +268,7 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
 
   # PARA CADA (docid, documento) en corpus:
   for docid, documento in _iter_corpus(corpus):
+    print(f"  Procesando docID={docid}")
     doc_map[docid] = documento
 
     # Paso 1: frecuencias por termino en este documento
@@ -302,10 +297,11 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
   time_index = time.perf_counter() - t0
   index_path = os.path.join(index_root_path, f"{index_name}.bin")
   vocab_path = os.path.join(index_root_path, f"{index_name}_vocab.pkl")
+  docmap_path = os.path.join(index_root_path, f"{index_name}_docmap.pkl")
 
   # Merge
   t0 = time.perf_counter()
-  vocabulary = bsbi_merge(term2id, chunk_id, index_root_path, index_path, vocab_path)
+  vocabulary = bsbi_merge(term2id, chunk_id, index_root_path, index_path, doc_map, vocab_path, docmap_path)
   time_merge = time.perf_counter() - t0
 
   print("\n" + "=" * 55)
@@ -326,7 +322,7 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
 
 # --------------  2. BSBI - MERGE  -------------------
 
-def bsbi_merge(term2id, chunk_count, index_root_path, index_path, vocab_path):
+def bsbi_merge(term2id, chunk_count, index_root_path, index_path, doc_map, vocab_path, docmap_path):
   """
   Mergea los chunks generados por BSBI y crea el indice binario final con postings (docid, freq) y el vocabulario pickle: termino -> [seek, df, term_id]
   """
@@ -372,6 +368,10 @@ def bsbi_merge(term2id, chunk_count, index_root_path, index_path, vocab_path):
     with open(vocab_path, "wb") as vocab_file:
       pickle.dump(vocabulary, vocab_file)
 
+    # Guardar Doc Map como pickle
+    with open(docmap_path, "wb") as docmap_file:
+      pickle.dump(doc_map, docmap_file)
+
   finally:
     for chunk in chunks:
       chunk.close()
@@ -402,12 +402,7 @@ def build_index(collection_path: str,
   corpus = [
     (docid, os.path.join(collection_path, archivo))
     for docid, archivo in enumerate(archivos, start=1)
-  ]
-
-  print("collection_path", collection_path)
-  print("archivos", archivos)
-  print("corpus", corpus)
-  
+  ] 
 
   # Construccion del indice con merge
   resultado = bsbi_index(
@@ -450,44 +445,21 @@ def build_index(collection_path: str,
   print(f"  Documentos          : {len(doc_map)}")
   print(f"  Chunks generados    : {chunk_count}")
   print("\n" + "=" * 55)
-  print("  VOCABULARIO ---> 'termino': df, seek")
-  print("=" * 55 + "\n")
-  print(vocabulary)
-  print("\n" + "=" * 55)
-  print("  POSTING ---> termID:(docID,TF)")
-  print("=" * 55)
-  with open(resultado["index_path"], "rb") as f:
-    for termino, (df, seek) in vocabulary.items():
-        f.seek(seek)
-        raw = f.read(df * LEN_POSTING)
-        valores = struct.unpack(f">{df * 2}I", raw)
-        postings = list(zip(valores[0::2], valores[1::2]))
-        print(termino, postings)
-  print("\n" + "=" * 55)
+  # print("  VOCABULARIO ---> 'termino': df, seek")
+  # print("=" * 55 + "\n")
+  # print(vocabulary)
+  # print("\n" + "=" * 55)
+  # print("  POSTING ---> termID:(docID,TF)")
+  # print("=" * 55)
+  # with open(resultado["index_path"], "rb") as f:
+  #   for termino, (df, seek) in vocabulary.items():
+  #       f.seek(seek)
+  #       raw = f.read(df * LEN_POSTING)
+  #       valores = struct.unpack(f">{df * 2}I", raw)
+  #       postings = list(zip(valores[0::2], valores[1::2]))
+  #       print(termino, postings)
+  # print("\n" + "=" * 55)
 
 
   return resultado
 
-# --------------  MAIN  -------------------
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="BSBI Indexer"
-    )
-    parser.add_argument("collection",
-                        help="Directorio con los documentos")
-    parser.add_argument("-n", "--block-size", type=int, default=10,
-                        help="Documentos por bloque (volcado a disco)")
-    parser.add_argument("--index-dir",  default="index",
-                        help="Directorio para el índice final")
-    parser.add_argument("--chunks-dir", default="chunks",
-                        help="Directorio para los chunks parciales")
-    parser.add_argument("--index-name", default="index",
-                        help="Nombre base del índice")
-    args = parser.parse_args()
-
-    build_index(
-        collection_path=args.collection,
-        n=args.block_size,
-        chunks_dir=args.chunks_dir,
-        index_name=args.index_name,
-    )

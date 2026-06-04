@@ -78,6 +78,11 @@ def parse_document(path):
   """
   with open(path, "r", encoding="utf-8", errors="ignore") as f:
     return f.read()
+  
+def extract_text_from_html(filepath:str):
+  with open(filepath, "r", encoding="utf-8") as file:
+    soup = BeautifulSoup(file,"html.parser")
+    return soup.get_text(separator=" ", strip= True)
 
 def _tokens_from_document(documento):
     "Normaliza un documento a una lista de tokens."
@@ -127,42 +132,6 @@ def write_chunk(partial_tuples, chunk_path):
   with open(chunk_path, "wb") as f:
     if flat:
       f.write(struct.pack(f">{len(flat)}I", *flat))
-
-# -------------- Wiki-Small procesamiento  -------------------
-
-def extract_text_from_html(filepath:str):
-  with open(filepath, "r", encoding="utf-8") as file:
-    soup = BeautifulSoup(file,"html.parser")
-    return soup.get_text(separator=" ", strip= True)
-
-def process_wiki_collection(root_dir: str) -> dict:
-    documents = {}
-
-    for dirpath, _, filenames in os.walk(root_dir):
-        for filename in filenames:
-
-            full_path = os.path.join(dirpath, filename)
-            relative_path = os.path.relpath(full_path, root_dir)
-
-            try:
-                # CASO HTML
-                if filename.endswith(".html"):
-                    text = extract_text_from_html(full_path)
-
-                # CASO TXT
-                elif filename.endswith(".txt"):
-                    with open(full_path, "r", encoding="utf-8") as f:
-                        text = f.read()
-
-                else:
-                    continue
-
-                documents[relative_path] = text
-
-            except Exception as e:
-                print(f"Error leyendo {full_path}: {e}")
-
-    return documents
 
 # --------------  PostingChunk  -------------------
 
@@ -343,7 +312,8 @@ def bsbi_index(corpus, memoryLimit, index_root_path, index_name):
     "index_path": index_path,
     "vocab_path": vocab_path,
     "time_index": time_index,
-    "time_merge": time_merge
+    "time_merge": time_merge,
+    "n": memoryLimit
   }
 
 # --------------  2. BSBI - MERGE  -------------------
@@ -409,7 +379,8 @@ def bsbi_merge(term2id, chunk_count, index_root_path, index_path, doc_map, vocab
 
 # --------------  BUILD INDEX  -------------------
  
-def build_index(collection_path: str,
+def build_index(corpus,
+                collection_path,
                 n: int,
                 chunks_dir: str,
                 index_name: str = "index") -> None:
@@ -421,19 +392,6 @@ def build_index(collection_path: str,
   """
   os.makedirs(chunks_dir, exist_ok=True)
 
-  # archivos = sorted(
-  #   archivo
-  #   for archivo in os.listdir(collection_path)
-  # )
-
-  print("Procesando coleccion...")
-  archivos = sorted(process_wiki_collection(collection_path))
-
-  corpus = [
-    (docid, os.path.join(collection_path, archivo))
-    for docid, archivo in enumerate(archivos, start=1)
-  ] 
-
   # Construccion del indice con merge
   resultado = bsbi_index(
     corpus=corpus,
@@ -444,15 +402,15 @@ def build_index(collection_path: str,
 
   # ----------- RESULTADOS ------------
   col_size   = sum(
-    os.path.getsize(os.path.join(collection_path, f))
-    for f in os.listdir(collection_path)
-    if not f.startswith(".")
+    os.path.getsize(os.path.join(root, f))
+    for root, _, files in os.walk(collection_path)
+    for f in files
   )
   idx_size   = os.path.getsize(resultado["index_path"])  if os.path.exists(resultado["index_path"])  else 0
   vocab_size = os.path.getsize(resultado["vocab_path"])  if os.path.exists(resultado["vocab_path"])  else 0
   total_idx  = idx_size + vocab_size
 
-  #overhead = total_idx / col_size if col_size > 0 else 0.0
+  overhead = total_idx / col_size
 
   time_index = resultado["time_index"]
   time_merge = resultado["time_merge"]
@@ -464,7 +422,7 @@ def build_index(collection_path: str,
   resultado["idx_size"] = idx_size
   resultado["vocab_size"] = vocab_size
   resultado["total_idx"] = total_idx
-  #resultado["overhead"] = overhead
+  resultado["overhead"] = overhead
 
   print("\n" + "=" * 55)
   print("  RESULTADOS")
@@ -473,7 +431,7 @@ def build_index(collection_path: str,
   print(f"  Índice binario      : {idx_size/1024:.1f} KB")
   print(f"  Vocabulario (pickle): {vocab_size/1024:.1f} KB")
   print(f"  Total índice        : {total_idx/1024:.1f} KB")
-  #print(f"  Overhead (idx/col)  : {overhead:.4f}  ({overhead*100:.1f}%)")
+  print(f"  Overhead (idx/col)  : {overhead:.4f}  ({overhead*100:.1f}%)")
   print(f"  Tiempo indexación   : {time_index:.4f} s")
   print(f"  Tiempo merge        : {time_merge:.4f} s")
   print(f"  Tiempo total        : {time_index+time_merge:.4f} s")

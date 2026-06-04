@@ -1,5 +1,5 @@
 """
-TAAT para Ranking
+TAAT para Modelo Booleano
 
 Consultas:
 ((t1 AND t2) OR t3)
@@ -156,7 +156,6 @@ class PostingList(ABC):
 
 OPERATORS = {"AND", "OR", "NOT"}
 
-
 def op_and(p: PostingList, q: PostingList):
     "Intersección de dos posting lists"
     result = []
@@ -290,7 +289,6 @@ def evaluar(query, vocabulario, index_path, docids):
             return item  # ya es lista
 
         # Procesar operadores binarios de izquierda a derecha
-        # resolved tiene forma: [cursor, op, cursor, op, cursor, ...]
         left = resolved[0]
         j = 1
         while j < len(resolved):
@@ -331,7 +329,7 @@ def evaluar(query, vocabulario, index_path, docids):
             stack.append("(")
 
         elif token == ")":
-            # Recolectar el frame entre el "(" correspondiente y ")"
+            # Recolectar el frame entre el "(" y ")"
             frame = []
             while stack and stack[-1] != "(":
                 frame.insert(0, stack.pop())
@@ -360,12 +358,12 @@ def evaluar(query, vocabulario, index_path, docids):
             return sorted(result_ids)
         return sorted(top) if isinstance(top, list) else []
 
-    # Evaluar frame sin paréntesis (consulta sin envolver)
+    # Evaluar frame sin paréntesis
     remaining = list(stack)
     result_ids = obtener_cursor(remaining)
     return sorted(result_ids)
 
-# # --------------  MOSTRAR RESULTADOS  -------------------
+# --------------  MOSTRAR RESULTADOS  -------------------
 
 def print_results(result_docids,
                   doc_map,
@@ -383,7 +381,7 @@ def print_results(result_docids,
             print(f"  {name:<30} {docid:>6}")
     print("-" * 45)
 
-# # --------------  TAAT  -------------------
+# # --------------  TAAT de ejemplo  -------------------
 # def TAAT(terms, index):
 #     acc = {}
 #     for term in terms:

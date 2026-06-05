@@ -1,0 +1,27 @@
+Colección: 121818 documentos en 'TP4/Colecciones/wiki-large/en/articles'
+
+=======================================================
+  COMIENZO ALGORITMO BSBI
+  Colección: 121818 documentos - volcado cada 300000 documentos
+=======================================================
+
+  Merge en proceso...
+
+=======================================================
+  FIN del allgortimo BSBI
+=======================================================
+
+=======================================================
+  RESULTADOS
+=======================================================
+  Colección           : 3042678.8 KB
+  Índice binario      : 298200.9 KB
+  Vocabulario (pickle): 103054.6 KB
+  Total índice        : 401255.5 KB
+  Overhead (idx/col)  : 0.1319  (13.2%)
+  Tiempo indexación   : 6882.5244 s
+  Tiempo merge        : 191.5137 s
+  Tiempo total        : 7074.0381 s
+  Términos (vocab)    : 3511498
+  Documentos          : 121818
+  Chunks generados    : 128

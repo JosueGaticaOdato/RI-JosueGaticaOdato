@@ -1,0 +1,32 @@
+Compresion del indice con VByte (docID) y Elias (freq)
+Nombre del indice: index-large
+(3,511,498 términos, 121,818 docs)
+Tamaño índice original: 291.21 MB
+
+──────────────────────────────────────────────────────────────
+  SIN DGaps
+──────────────────────────────────────────────────────────────
+  [1/2] Comprimiendo... listo en 676.498s
+  [2/2] Descomprimiendo... listo en 83.896s
+
+  Tamaño docIDs  (VByte):  104.36 MB
+  Tamaño freqs   (Elias-γ): 10.10 MB
+  Total comprimido:         114.45 MB
+  Tasa de compresión:       2.54x
+  Ahorro de espacio:        60.7%
+  Tiempo compresión:        676.498s
+  Tiempo descompresión:     83.896s
+
+──────────────────────────────────────────────────────────────
+  CON DGaps
+──────────────────────────────────────────────────────────────
+  [1/2] Comprimiendo... listo en 697.997s
+  [2/2] Descomprimiendo... listo en 66.898s
+
+  Tamaño docIDs  (VByte):  53.05 MB
+  Tamaño freqs   (Elias-γ): 10.10 MB
+  Total comprimido:         63.15 MB
+  Tasa de compresión:       4.61x
+  Ahorro de espacio:        78.3%
+  Tiempo compresión:        697.997s
+  Tiempo descompresión:     66.898s

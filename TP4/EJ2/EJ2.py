@@ -14,6 +14,7 @@ from enum import Enum
 import os
 import pickle
 import struct
+import time
 
 # --------------  CONSTANTES  -------------------
 
@@ -367,9 +368,11 @@ def evaluar(query, vocabulario, index_path, docids):
 
 def print_results(result_docids,
                   doc_map,
-                  query: str) -> None:
+                  query: str,
+                  tiempo) -> None:
     print(f"\nConsulta : {query}")
     print(f"Resultados: {len(result_docids)} documento(s)")
+    print(f"Tiempo: {tiempo} s")
     print("-" * 45)
     if not result_docids:
         print("  (sin resultados)")
@@ -416,8 +419,10 @@ def main():
     print(f"[TAAT] Vocabulario: {len(vocabulary)} términos | "
           f"Colección: {len(doc_map)} documentos")
 
+    start = time.perf_counter()
     result = evaluar(args.query, vocabulary, index_path, all_docids)
-    print_results(result, doc_map, args.query)
+    end = time.perf_counter() - start
+    print_results(result, doc_map, args.query, end)
 
 
 if __name__ == "__main__":

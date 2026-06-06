@@ -14,6 +14,11 @@ import os
 import pickle
 import re
 import struct
+import time
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # --------------  CONSTANTES  -------------------
 
@@ -21,32 +26,36 @@ LEN_POSTING = 8
 
 # -------------- TOKENIZER (del TP1) ----------------------
 
-def tokenizer(texto,stopwords, minimo = 2, maximo =float('inf')):
-    texto = texto.lower() # Minusculas
 
-    tokens = re.findall(r"[a-záéíóúüñ]+", texto) #Solo letras con acento y ñ
+def tokenizer(texto, stopwords, minimo=2, maximo=float("inf")):
+    texto = texto.lower()  # Minusculas
+
+    tokens = re.findall(r"[a-záéíóúüñ]+", texto)  # Solo letras con acento y ñ
 
     tokens_validos = []
     for token in tokens:
-        
+
         # Stopwords
         if stopwords and token in stopwords:
             continue
-        
+
         # Minimo y maximo
         if len(token) > maximo or len(token) < minimo:
             continue
-        
+
         tokens_validos.append(token)
 
     return tokens_validos
 
+
 def read_stopwords(archivo_stopwords):
     with open(archivo_stopwords, "r", encoding="utf-8") as file:
-      stopwords = set(file.read().splitlines())
+        stopwords = set(file.read().splitlines())
     return stopwords
 
+
 # --------------  FUNCIONES  -------------------
+
 
 def cargar_indice(index_dir, index_name):
     "Cargar vocabulario y doc_map desde disco"
@@ -80,6 +89,21 @@ def leer_posting(term, vocabulario, index_path):
     return docids, freqs
 
 
+def leer_posting_memoria(term, vocabulario, indice_en_memoria):
+    """
+    Lee la posting list de un término desde memoria
+    """
+    df, seek = vocabulario[term]
+
+    # Directamente del buffer en RAM
+    raw = indice_en_memoria[seek : seek + (df * LEN_POSTING)]
+
+    unpacked = struct.unpack(f">{df * 2}I", raw)
+    docids = list(unpacked[0::2])
+    freqs = list(unpacked[1::2])
+    return docids, freqs
+
+
 # --------------  POSTING LIST  -------------------
 
 
@@ -102,21 +126,18 @@ class PostingList(ABC):
         self._freqs = freqs if freqs else [1] * len(docids)
         self._cursor = 0 if docids else -1
 
-    
     def docid(self):
         """docID actual; None si cursor = -1 (lista agotada)."""
         if self._cursor == -1:
             return None
         return self._docids[self._cursor]
 
-    
     def weight(self):
         """Peso del documento actual."""
         if self._cursor == -1:
             return None
         return float(self._freqs[self._cursor])
 
-    
     def next(self) -> None:
         """Avanza al siguiente documento. Cursor → -1 si no hay más."""
         if self._cursor == -1:
@@ -125,7 +146,6 @@ class PostingList(ABC):
         if self._cursor >= len(self._docids):
             self._cursor = -1
 
-    
     def ge(self, target) -> int:
         "Galloping search"
 
@@ -163,7 +183,6 @@ class PostingList(ABC):
         self._cursor = -1
         return None
 
-    
     def reset(self):
         """Reinicia el cursor al inicio de la lista."""
         self._cursor = 0 if self._docids else -1
@@ -181,6 +200,7 @@ class PostingList(ABC):
 # --------------  OPERADORES BOOLEANOS  -------------------
 
 OPERATORS = {"AND", "OR", "NOT"}
+
 
 def op_and(p: PostingList, q: PostingList):
     "Intersección de dos posting lists"
@@ -257,7 +277,7 @@ def tokenize_query(query: str):
 # --------------  EVALUAR  -------------------
 
 
-def evaluar(query, vocabulario, index_path, docids):
+def evaluar(query, vocabulario, index_path, docids, indice_buffer=None):
     "Ealua una consulta boolean"
 
     """Algoritmod de la pila por cada token"
@@ -276,9 +296,14 @@ def evaluar(query, vocabulario, index_path, docids):
     def obtener_cursor(token):
         "Obtiene el cursor para un término del vocabulario."
         t = token.lower()
-        docids, freqs = leer_posting(t, vocabulario, index_path)
+
+        if indice_buffer is None:
+            docids, freqs = leer_posting(t, vocabulario, index_path)
+        else:
+            docids, freqs = leer_posting_memoria(t, vocabulario, indice_buffer)
+
         return PostingList(docids, freqs)
-    
+
     # ---------------------------------------------------
 
     def evaluar_parentesis(frame):
@@ -347,7 +372,7 @@ def evaluar(query, vocabulario, index_path, docids):
             final_ids.append(left.docid())
             left.next()
         return final_ids
-    
+
     # ---------------------------------------------------
 
     for token in tokens:
@@ -389,11 +414,11 @@ def evaluar(query, vocabulario, index_path, docids):
     result_ids = obtener_cursor(remaining)
     return sorted(result_ids)
 
+
 # --------------  MOSTRAR RESULTADOS  -------------------
 
-def print_results(result_docids,
-                  doc_map,
-                  query: str) -> None:
+
+def print_results(result_docids, doc_map, query: str) -> None:
     print(f"\nConsulta : {query}")
     print(f"Resultados: {len(result_docids)} documento(s)")
     print("-" * 45)
@@ -407,7 +432,9 @@ def print_results(result_docids,
             print(f"  {name:<30} {docid:>6}")
     print("-" * 45)
 
+
 # --------------- CARGAR QUERY -----------------------
+
 
 def load_queries(path, stopwords_path):
     queries = {}
@@ -422,10 +449,12 @@ def load_queries(path, stopwords_path):
             qid, text = line.split(":", 1)
             queries[int(qid)] = tokenizer(text, stopwords_set)
 
-    #print(queries)
+    # print(queries)
     return queries
 
+
 # --------------- FILTRAR CANTIDAD DE TERMINOS -----------------------
+
 
 def filter_by_length(queries, n):
     result = {}
@@ -436,21 +465,156 @@ def filter_by_length(queries, n):
 
     return result
 
-def evaluar_querys_dos_terminos(querys, vocabulary, index_path, all_docids):
-    """ Evaluamos las querys con la siguiente estrctura 
-        t1 AND t2
-        t1 OR t2
-        t1 NOT t2
-    """
-    pass
 
-def evaluar_querys_tres_terminos(querys, vocabulary, index_path, all_docids):
-    """ Evaluamos las querys con la siguiente estrctura 
-        t1 AND t2 AND t3
-        (t1 OR t2) NOT t3
-        (t1 AND t2) OR t3
+def evaluar_querys_dos_terminos(
+    querys, vocabulary, index_path, all_docids, docmap, indice_buffer=None
+):
+    """Evaluamos las querys con la siguiente estrctura
+    t1 AND t2
+    t1 OR t2
+    t1 NOT t2
     """
-    pass
+    resultados = {"AND": [], "OR": [], "NOT": []}
+
+    for qid, tokens in querys.items():
+        t1, t2 = tokens[0], tokens[1]
+
+        # Ambos terminos deben estar en el vocabulario
+        if t1 not in vocabulary or t2 not in vocabulary:
+            continue
+
+        # df de cada termino
+        df_t1 = vocabulary[t1][0]
+        df_t2 = vocabulary[t2][0]
+
+        # armar query solicitadas
+        queries_str = {
+            "AND": f"( {t1} AND {t2} )",
+            "OR": f"( {t1} OR {t2} )",
+            "NOT": f"( {t1} AND NOT {t2} )",
+        }
+
+        # Ejecutar y medir tiempo para cada operador
+        for op, q_str in queries_str.items():
+            t0 = time.perf_counter()
+            result = evaluar(q_str, vocabulary, index_path, all_docids, indice_buffer)
+            # print_results(result, docmap, q_str)
+            tiempo_ejecucion = time.perf_counter() - t0
+
+            resultados[op].append(
+                {"qid": qid, "df_t1": df_t1, "df_t2": df_t2, "tiempo": tiempo_ejecucion}
+            )
+
+    return resultados
+
+
+def evaluar_querys_tres_terminos(
+    querys, vocabulary, index_path, all_docids, docmap, indice_buffer=None
+):
+    """Evaluamos las querys con la siguiente estrctura
+    t1 AND t2 AND t3
+    (t1 OR t2) NOT t3
+    (t1 AND t2) OR t3
+    """
+    resultados = {"AND-AND": [], "OR-AND-NOT": [], "AND-OR": []}
+
+    for qid, tokens in querys.items():
+        t1, t2, t3 = tokens[0], tokens[1], tokens[2]
+
+        # Ambos terminos deben estar en el vocabulario
+        if t1 not in vocabulary or t2 not in vocabulary or t3 not in vocabulary:
+            continue
+
+        # df de cada termino
+        df_t1 = vocabulary[t1][0]
+        df_t2 = vocabulary[t2][0]
+        df_t3 = vocabulary[t3][0]
+
+        # armar query solicitadas
+        queries_str = {
+            "AND-AND": f"( {t1} AND {t2} AND {t3} )",
+            "OR-AND-NOT": f"( ( {t1} OR {t2} ) AND NOT {t3} )",
+            "AND-OR": f"( ( {t1} AND {t2} ) OR {t3} )",
+        }
+
+        # Ejecutar y medir tiempo para cada operador
+        for op, q_str in queries_str.items():
+            t0 = time.perf_counter()
+            result = evaluar(q_str, vocabulary, index_path, all_docids, indice_buffer)
+            # print_results(result, docmap, q_str)
+            tiempo_ejecucion = time.perf_counter() - t0
+
+            resultados[op].append(
+                {
+                    "qid": qid,
+                    "df_t1": df_t1,
+                    "df_t2": df_t2,
+                    "df_t3": df_t3,
+                    "tiempo": tiempo_ejecucion,
+                }
+            )
+
+    return resultados
+
+
+# ----------------- GRAFICOS ---------------------------
+
+
+def analizar_resultados(resultados, modo_ejecucion):
+    "Agrupar tiempos y generar graficos relacionados"
+    print(f"Generando graficos para modo: {modo_ejecucion}")
+
+    sns.set_theme(style="whitegrid")
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    fig.suptitle(
+        f"Tiempo de Ejecución vs Tamaño de Listas (Modo: {modo_ejecucion.upper()})",
+        fontsize=16,
+    )
+
+    # ---------- OR ------------
+    if resultados["OR"]:
+        df_or = pd.DataFrame(resultados["OR"])
+        # la complejidad teórica es la suma de los DF: O(df1 + df2)
+        df_or['df_total'] = df_or['df_t1'] + df_or['df_t2']
+        
+        sns.scatterplot(data=df_or, x='df_total', y='tiempo', ax=axes[0], color='blue', alpha=0.6)
+        axes[0].set_title('Operador OR - Tiempo vs (df_1 + df_2)')
+        axes[0].set_xlabel('Suma de Frecuencias (df_1 + df_2)')
+        axes[0].set_ylabel('Tiempo (segundos)')
+
+    # ---------- AND ----------------
+    if resultados["AND"]:
+        df_and = pd.DataFrame(resultados["AND"])
+        # el tiempo estar limitado por la lista más corta
+        df_and['df_min'] = df_and[['df_t1', 'df_t2']].min(axis=1)
+        
+        sns.scatterplot(data=df_and, x='df_min', y='tiempo', ax=axes[1], color='green', alpha=0.6)
+        axes[1].set_title('Operador AND - Tiempo vs min(df_1, df_2)')
+        axes[1].set_xlabel('Frecuencia Mínima min(df_1, df_2)')
+        axes[1].set_ylabel('Tiempo (segundos)')
+
+    # ---............ NOT ---------
+    if resultados["NOT"]:
+        df_not = pd.DataFrame(resultados["NOT"])
+        
+        sns.scatterplot(data=df_not, x='df_t2', y='tiempo', ax=axes[2], color='red', alpha=0.6)
+        axes[2].set_title('Operador NOT - Tiempo vs Df_2 (Término negado)')
+        axes[2].set_xlabel('Frecuencia del término negado (df_2)')
+        axes[2].set_ylabel('Tiempo (segundos)')
+
+    plt.tight_layout()
+    filename = os.path.join(f"plots-{modo_ejecucion.lower()}.png")
+    fig.savefig(filename, bbox_inches='tight', dpi=150)
+    print(f"Grafico guardado")
+    #plt.show()
+
+    # # estadísticas descriptivas
+    # for op in ["OR", "AND", "NOT"]:
+    #     if resultados[op]:
+    #         df_temp = pd.DataFrame(resultados[op])
+    #         print(f"\nEstadísticas para {op}:")
+    #         print(df_temp['tiempo'].describe())
+
 
 
 # # --------------  TAAT de ejemplo  -------------------
@@ -465,14 +629,28 @@ def evaluar_querys_tres_terminos(querys, vocabulary, index_path, all_docids):
 
 # --------------  MAIN  -------------------
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="TAAT Boolean — Ejecucion de querys de 2 y 3 terminos"
     )
-    parser.add_argument("--index-dir",  default="index/debug",
-        help="Directorio del índice (default: index/debug)")
-    parser.add_argument("--index-name", default="debug_index",
-        help="Nombre base del índice (default: debug_index)")
+    parser.add_argument(
+        "--index-dir",
+        default="index/debug",
+        help="Directorio del índice (default: index/debug)",
+    )
+    parser.add_argument(
+        "--index-name",
+        default="debug_index",
+        help="Nombre base del índice (default: debug_index)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["disk", "memory"],
+        default="disk",
+        help="Modo de ejecución: 'disk' (lee del disco) o 'memory' (carga todo a RAM)",
+    )
+
     args = parser.parse_args()
 
     vocabulary, doc_map = cargar_indice(args.index_dir, args.index_name)
@@ -481,26 +659,47 @@ def main():
     # Universo completo de docids (todos los documentos de la colección)
     all_docids = sorted(doc_map.keys())
 
-    print(f"[TAAT] Vocabulario: {len(vocabulary)} términos | "
-          f"Colección: {len(doc_map)} documentos")
-    
+    # Logica de modo (disco o memoria)
+    indice_buffer = None
+    if args.mode == "memory":
+        print(
+            f"[TAAT] Modo MEMORIA seleccionado. Cargando {args.index_name}.bin en RAM..."
+        )
+        with open(index_path, "rb") as f:
+            indice_buffer = f.read()
+    else:
+        print("[TAAT] Modo DISCO seleccionado.")
+
+    print(
+        f"[TAAT] Vocabulario: {len(vocabulary)} términos | "
+        f"Colección: {len(doc_map)} documentos"
+    )
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     path_queries = os.path.join(BASE_DIR, "EFF-10K-queries.txt")
+    # path_queries = os.path.join(BASE_DIR, "test.txt")
     path_stopwords = os.path.join(BASE_DIR, "stopwords.txt")
-    
-    queries = load_queries(path_queries,path_stopwords)
+
+    queries = load_queries(path_queries, path_stopwords)
 
     queries_2 = filter_by_length(queries, 2)
     queries_3 = filter_by_length(queries, 3)
 
     print(f"Cantidad de querys con 2 terminos: {len(queries_2)}")
+    print("Ejecutando querys de 2 terminos (AND, OR, NOT)")
+    result_2 = evaluar_querys_dos_terminos(
+        queries_2, vocabulary, index_path, all_docids, doc_map, indice_buffer
+    )
+    # print(result_2)
 
     print(f"Cantidad de querys con 3 terminos: {len(queries_3)}")
-
-    #result = evaluar(args.query, vocabulary, index_path, all_docids)
-    #print_results(result, doc_map, args.query)
+    print("Ejecutando querys de 3 terminos (AND-AND, OR-AND-NOT, AND-NOT)")
+    result_3 = evaluar_querys_tres_terminos(queries_3, vocabulary, index_path, all_docids, doc_map, indice_buffer)
+    # print(result_3)
+    
+    analizar_resultados(result_2, args.mode)
+    analizar_resultados(result_3, args.mode)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ python TP4/EJ1/EJ1.py [-h] [-n BLOCK_SIZE] [--index-dir INDEX_DIR] [--index-name
 
 Prueba con coleccion vista en clase
 ```bash
-python TP4/EJ1/EJ1.py TP4/EJ1/coleccion_debug -n 4 --index-dir TP4/EJ1/index_debug --index-name index_debug
+python TP4/EJ1/EJ1.py TP4/Colecciones/coleccion_debug -n 4 --index-dir TP4/EJ1/index_debug --index-name index_debug
 ```
 
 Creacion del indice con coleccion de Snapshot de Wikipedia (debug)
@@ -29,7 +29,7 @@ python TP4/EJ1/EJ1.py TP4/Colecciones/wiki-large/en/articles -n 300000  --index-
 
 Prueba con coleccion vista en clase
 ```bash
-python TP4/EJ1/BSBI_Analisis.py TP4/EJ1/coleccion_debug --index-dir TP4/EJ1/index-analisis 
+python TP4/EJ1/BSBI_Analisis.py TP4/Colecciones/coleccion_debug --index-dir TP4/EJ1/index-analisis 
 ```
 
 Ejecucion con coleccion de Snapshot de Wikipedia (debug)
@@ -69,6 +69,6 @@ python TP4/EJ1/EJ1-Posting.py spirit --index-dir TP4/index-small --index-name in
 
 Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (run)
 ```bash
-python TP4/EJ1/EJ1-Posting.py encyclopedia --index-dir TP4/index-run --index-name index-run
-python TP4/EJ1/EJ1-Posting.py spirit --index-dir TP4/index-run --index-name index-run
+python TP4/EJ1/EJ1-Posting.py encyclopedia --index-dir TP4/index-large --index-name index-large
+python TP4/EJ1/EJ1-Posting.py spirit --index-dir TP4/index-large --index-name index-large
 ```

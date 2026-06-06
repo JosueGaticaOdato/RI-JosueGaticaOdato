@@ -17,16 +17,18 @@ B.	Queries |q| = 3
 ## Prueba con coleccion vista en clase
 
 ```bash
-python TP4/EJ3/EJ3.py --index-dir TP4/EJ1/index_debug --index-name index_debug
+python TP4/EJ3/EJ3.py --index-dir TP4/EJ1/index_debug --index-name index_debug --mode disk
 ```
 
 ## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (small)
 ```bash
-python TP4/EJ3/EJ3.py --index-dir TP4/index-small --index-name index-small
+python TP4/EJ3/EJ3.py --index-dir TP4/index-small --index-name index-small --mode disk
+python TP4/EJ3/EJ3.py --index-dir TP4/index-small --index-name index-small --mode memory
 ```
 
 ## Ejecucicion del script con el indice de la coleccion Snapshot de Wikipedia (run)
 ```bash
-python TP4/EJ3/EJ3.py --index-dir TP4/index-run --index-name index-run
+python TP4/EJ3/EJ3.py --index-dir TP4/index-large --index-name index-large --mode disk
+python TP4/EJ3/EJ3.py --index-dir TP4/index-large --index-name index-large --mode memory
 ```
 

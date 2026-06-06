@@ -47,15 +47,12 @@ def tokenizer(texto, stopwords, minimo=2, maximo=float("inf")):
 
     return tokens_validos
 
-
 def read_stopwords(archivo_stopwords):
     with open(archivo_stopwords, "r", encoding="utf-8") as file:
         stopwords = set(file.read().splitlines())
     return stopwords
 
-
 # --------------  FUNCIONES  -------------------
-
 
 def cargar_indice(index_dir, index_name):
     "Cargar vocabulario y doc_map desde disco"
@@ -69,7 +66,6 @@ def cargar_indice(index_dir, index_name):
     with open(docmap_path, "rb") as f:
         doc_map = pickle.load(f)
     return vocabulary, doc_map
-
 
 def leer_posting(term, vocabulario, index_path):
     """
@@ -88,7 +84,6 @@ def leer_posting(term, vocabulario, index_path):
     freqs = list(unpacked[1::2])
     return docids, freqs
 
-
 def leer_posting_memoria(term, vocabulario, indice_en_memoria):
     """
     Lee la posting list de un término desde memoria
@@ -103,9 +98,7 @@ def leer_posting_memoria(term, vocabulario, indice_en_memoria):
     freqs = list(unpacked[1::2])
     return docids, freqs
 
-
 # --------------  POSTING LIST  -------------------
-
 
 class PostingList(ABC):
     """
@@ -276,7 +269,6 @@ def tokenize_query(query: str):
 
 # --------------  EVALUAR  -------------------
 
-
 def evaluar(query, vocabulario, index_path, docids, indice_buffer=None):
     "Ealua una consulta boolean"
 
@@ -417,7 +409,6 @@ def evaluar(query, vocabulario, index_path, docids, indice_buffer=None):
 
 # --------------  MOSTRAR RESULTADOS  -------------------
 
-
 def print_results(result_docids, doc_map, query: str) -> None:
     print(f"\nConsulta : {query}")
     print(f"Resultados: {len(result_docids)} documento(s)")
@@ -435,7 +426,6 @@ def print_results(result_docids, doc_map, query: str) -> None:
 
 # --------------- CARGAR QUERY -----------------------
 
-
 def load_queries(path, stopwords_path):
     queries = {}
     stopwords_set = read_stopwords(stopwords_path)
@@ -452,10 +442,7 @@ def load_queries(path, stopwords_path):
     # print(queries)
     return queries
 
-
 # --------------- FILTRAR CANTIDAD DE TERMINOS -----------------------
-
-
 def filter_by_length(queries, n):
     result = {}
 
@@ -560,60 +547,201 @@ def evaluar_querys_tres_terminos(
 # ----------------- GRAFICOS ---------------------------
 
 
-def analizar_resultados(resultados, modo_ejecucion):
+def analizar_resultados(resultados, modo_ejecucion, query_size="2"):
     "Agrupar tiempos y generar graficos relacionados"
-    print(f"Generando graficos para modo: {modo_ejecucion}")
+    print(f"Generando graficos para modo: {modo_ejecucion}, Query size: {query_size}")
 
     sns.set_theme(style="whitegrid")
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    fig.suptitle(
-        f"Tiempo de Ejecución vs Tamaño de Listas (Modo: {modo_ejecucion.upper()})",
-        fontsize=16,
-    )
+    
+    if query_size == "2":
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+        fig.suptitle(
+            f"Tiempo de Ejecución - Queries Q=2 (Modo: {modo_ejecucion.upper()})",
+            fontsize=16,
+        )
 
-    # ---------- OR ------------
-    if resultados["OR"]:
-        df_or = pd.DataFrame(resultados["OR"])
-        # la complejidad teórica es la suma de los DF: O(df1 + df2)
-        df_or['df_total'] = df_or['df_t1'] + df_or['df_t2']
-        
-        sns.scatterplot(data=df_or, x='df_total', y='tiempo', ax=axes[0], color='blue', alpha=0.6)
-        axes[0].set_title('Operador OR - Tiempo vs (df_1 + df_2)')
-        axes[0].set_xlabel('Suma de Frecuencias (df_1 + df_2)')
-        axes[0].set_ylabel('Tiempo (segundos)')
+        # ---------- OR ------------
+        if resultados["OR"]:
+            df_or = pd.DataFrame(resultados["OR"])
+            # la complejidad teórica es la suma de los DF: O(df1 + df2)
+            df_or['df_total'] = df_or['df_t1'] + df_or['df_t2']
+            
+            sns.scatterplot(data=df_or, x='df_total', y='tiempo', ax=axes[0], color='blue', alpha=0.6)
+            axes[0].set_title('Operador OR - Tiempo vs (df_1 + df_2)')
+            axes[0].set_xlabel('Suma de Frecuencias (df_1 + df_2)')
+            axes[0].set_ylabel('Tiempo (segundos)')
 
-    # ---------- AND ----------------
-    if resultados["AND"]:
-        df_and = pd.DataFrame(resultados["AND"])
-        # el tiempo estar limitado por la lista más corta
-        df_and['df_min'] = df_and[['df_t1', 'df_t2']].min(axis=1)
-        
-        sns.scatterplot(data=df_and, x='df_min', y='tiempo', ax=axes[1], color='green', alpha=0.6)
-        axes[1].set_title('Operador AND - Tiempo vs min(df_1, df_2)')
-        axes[1].set_xlabel('Frecuencia Mínima min(df_1, df_2)')
-        axes[1].set_ylabel('Tiempo (segundos)')
+        # ---------- AND ----------------
+        if resultados["AND"]:
+            df_and = pd.DataFrame(resultados["AND"])
+            # el tiempo estar limitado por la lista más corta
+            df_and['df_min'] = df_and[['df_t1', 'df_t2']].min(axis=1)
+            
+            sns.scatterplot(data=df_and, x='df_min', y='tiempo', ax=axes[1], color='green', alpha=0.6)
+            axes[1].set_title('Operador AND - Tiempo vs min(df_1, df_2)')
+            axes[1].set_xlabel('Frecuencia Mínima min(df_1, df_2)')
+            axes[1].set_ylabel('Tiempo (segundos)')
 
-    # ---............ NOT ---------
-    if resultados["NOT"]:
-        df_not = pd.DataFrame(resultados["NOT"])
-        
-        sns.scatterplot(data=df_not, x='df_t2', y='tiempo', ax=axes[2], color='red', alpha=0.6)
-        axes[2].set_title('Operador NOT - Tiempo vs Df_2 (Término negado)')
-        axes[2].set_xlabel('Frecuencia del término negado (df_2)')
-        axes[2].set_ylabel('Tiempo (segundos)')
+        # ---............ NOT ---------
+        if resultados["NOT"]:
+            df_not = pd.DataFrame(resultados["NOT"])
+            
+            sns.scatterplot(data=df_not, x='df_t2', y='tiempo', ax=axes[2], color='red', alpha=0.6)
+            axes[2].set_title('Operador NOT - Tiempo vs Df_2 (Término negado)')
+            axes[2].set_xlabel('Frecuencia del término negado (df_2)')
+            axes[2].set_ylabel('Tiempo (segundos)')
+    
+    else:  # query_size == "3"
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+        fig.suptitle(
+            f"Tiempo de Ejecución - Queries Q=3 (Modo: {modo_ejecucion.upper()})",
+            fontsize=16,
+        )
+
+        # ---------- AND-AND --------
+        if resultados["AND-AND"]:
+            df_and_and = pd.DataFrame(resultados["AND-AND"])
+            df_and_and['df_min'] = df_and_and[['df_t1', 'df_t2', 'df_t3']].min(axis=1)
+            
+            sns.scatterplot(data=df_and_and, x='df_min', y='tiempo', ax=axes[0], color='purple', alpha=0.6)
+            axes[0].set_title('Operador AND-AND - Tiempo vs min(df_1, df_2, df_3)')
+            axes[0].set_xlabel('Frecuencia Mínima')
+            axes[0].set_ylabel('Tiempo (segundos)')
+
+        # ---------- OR-AND-NOT --------
+        if resultados["OR-AND-NOT"]:
+            df_or_and_not = pd.DataFrame(resultados["OR-AND-NOT"])
+            df_or_and_not['df_sum_12'] = df_or_and_not['df_t1'] + df_or_and_not['df_t2']
+            
+            sns.scatterplot(data=df_or_and_not, x='df_sum_12', y='tiempo', ax=axes[1], color='orange', alpha=0.6)
+            axes[1].set_title('Operador (OR)-NOT - Tiempo vs (df_1 + df_2)')
+            axes[1].set_xlabel('Suma de Frecuencias (df_1 + df_2)')
+            axes[1].set_ylabel('Tiempo (segundos)')
+
+        # ---------- AND-OR --------
+        if resultados["AND-OR"]:
+            df_and_or = pd.DataFrame(resultados["AND-OR"])
+            df_and_or['df_min_12'] = df_and_or[['df_t1', 'df_t2']].min(axis=1)
+            
+            sns.scatterplot(data=df_and_or, x='df_min_12', y='tiempo', ax=axes[2], color='brown', alpha=0.6)
+            axes[2].set_title('Operador (AND)-OR - Tiempo vs min(df_1, df_2)')
+            axes[2].set_xlabel('Frecuencia Mínima')
+            axes[2].set_ylabel('Tiempo (segundos)')
 
     plt.tight_layout()
-    filename = os.path.join(f"plots-{modo_ejecucion.lower()}.png")
+    filename = f"plots-Q{query_size}-{modo_ejecucion.lower()}.png"
     fig.savefig(filename, bbox_inches='tight', dpi=150)
-    print(f"Grafico guardado")
-    #plt.show()
+    print(f"Gráfico guardado: {filename}")
+    plt.close()
 
-    # # estadísticas descriptivas
-    # for op in ["OR", "AND", "NOT"]:
-    #     if resultados[op]:
-    #         df_temp = pd.DataFrame(resultados[op])
-    #         print(f"\nEstadísticas para {op}:")
-    #         print(df_temp['tiempo'].describe())
+
+def graficar_comparacion_modos(resultados_disk, resultados_memory, query_size="2"):
+    """Generar gráficos comparativos entre disk y memory"""
+    print(f"\nGenerando gráficos comparativos para Q={query_size}")
+    
+    sns.set_theme(style="whitegrid")
+    
+    if query_size == "2":
+        operators = ["AND", "OR", "NOT"]
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+        fig.suptitle(
+            f"Comparación DISK vs MEMORY - Queries Q=2",
+            fontsize=16,
+        )
+        
+        for idx, op in enumerate(operators):
+            df_disk = pd.DataFrame(resultados_disk[op])
+            df_memory = pd.DataFrame(resultados_memory[op])
+            
+            if len(df_disk) > 0:
+                df_disk['modo'] = 'DISK'
+            if len(df_memory) > 0:
+                df_memory['modo'] = 'MEMORY'
+            
+            df_combined = pd.concat([df_disk, df_memory], ignore_index=True)
+            
+            if len(df_combined) > 0:
+                if op == "AND":
+                    df_combined['df_metric'] = df_combined[['df_t1', 'df_t2']].min(axis=1)
+                    x_label = 'min(df_1, df_2)'
+                elif op == "OR":
+                    df_combined['df_metric'] = df_combined['df_t1'] + df_combined['df_t2']
+                    x_label = 'df_1 + df_2'
+                else:  # NOT
+                    df_combined['df_metric'] = df_combined['df_t2']
+                    x_label = 'df_2 (término negado)'
+                
+                sns.scatterplot(data=df_combined, x='df_metric', y='tiempo', hue='modo', 
+                              ax=axes[idx], alpha=0.6, s=100)
+                axes[idx].set_title(f'Operador {op}')
+                axes[idx].set_xlabel(x_label)
+                axes[idx].set_ylabel('Tiempo (segundos)')
+                axes[idx].legend(title='Modo')
+    
+    else:  # query_size == "3"
+        operators = ["AND-AND", "OR-AND-NOT", "AND-OR"]
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+        fig.suptitle(
+            f"Comparación DISK vs MEMORY - Queries Q=3",
+            fontsize=16,
+        )
+        
+        for idx, op in enumerate(operators):
+            df_disk = pd.DataFrame(resultados_disk[op])
+            df_memory = pd.DataFrame(resultados_memory[op])
+            
+            if len(df_disk) > 0:
+                df_disk['modo'] = 'DISK'
+            if len(df_memory) > 0:
+                df_memory['modo'] = 'MEMORY'
+            
+            df_combined = pd.concat([df_disk, df_memory], ignore_index=True)
+            
+            if len(df_combined) > 0:
+                if op == "AND-AND":
+                    df_combined['df_metric'] = df_combined[['df_t1', 'df_t2', 'df_t3']].min(axis=1)
+                    x_label = 'min(df_1, df_2, df_3)'
+                elif op == "OR-AND-NOT":
+                    df_combined['df_metric'] = df_combined['df_t1'] + df_combined['df_t2']
+                    x_label = 'df_1 + df_2'
+                else:  # AND-OR
+                    df_combined['df_metric'] = df_combined[['df_t1', 'df_t2']].min(axis=1)
+                    x_label = 'min(df_1, df_2)'
+                
+                sns.scatterplot(data=df_combined, x='df_metric', y='tiempo', hue='modo', 
+                              ax=axes[idx], alpha=0.6, s=100)
+                axes[idx].set_title(f'Operador {op}')
+                axes[idx].set_xlabel(x_label)
+                axes[idx].set_ylabel('Tiempo (segundos)')
+                axes[idx].legend(title='Modo')
+    
+    plt.tight_layout()
+    filename = f"plots-Q{query_size}-comparacion.png"
+    fig.savefig(filename, bbox_inches='tight', dpi=150)
+    print(f"Gráfico comparativo guardado: {filename}")
+    plt.close()
+
+
+def imprimir_estadisticas(resultados, query_size="2"):
+    """Imprimir estadísticas detalladas de los tiempos"""
+    if query_size == "2":
+        operators = ["AND", "OR", "NOT"]
+    else:
+        operators = ["AND-AND", "OR-AND-NOT", "AND-OR"]
+    
+    print(f"\n{'='*60}")
+    print(f"ESTADÍSTICAS - Queries Q={query_size}")
+    print(f"{'='*60}")
+    
+    for op in operators:
+        if resultados[op]:
+            df_temp = pd.DataFrame(resultados[op])
+            print(f"\n{op}:")
+            print(f"  Cantidad de queries: {len(df_temp)}")
+            print(f"  Tiempo promedio: {df_temp['tiempo'].mean():.6f} segundos")
+            print(f"  Tiempo mínimo: {df_temp['tiempo'].min():.6f} segundos")
+            print(f"  Tiempo máximo: {df_temp['tiempo'].max():.6f} segundos")
+            print(f"  Desv. estándar: {df_temp['tiempo'].std():.6f} segundos")
 
 
 
@@ -632,7 +760,7 @@ def analizar_resultados(resultados, modo_ejecucion):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="TAAT Boolean — Ejecucion de querys de 2 y 3 terminos"
+        description="TAAT Boolean — Ejecucion de querys de 2 y 3 terminos (CON Y SIN MEMORIA)"
     )
     parser.add_argument(
         "--index-dir",
@@ -644,12 +772,6 @@ def main():
         default="debug_index",
         help="Nombre base del índice (default: debug_index)",
     )
-    parser.add_argument(
-        "--mode",
-        choices=["disk", "memory"],
-        default="disk",
-        help="Modo de ejecución: 'disk' (lee del disco) o 'memory' (carga todo a RAM)",
-    )
 
     args = parser.parse_args()
 
@@ -659,26 +781,18 @@ def main():
     # Universo completo de docids (todos los documentos de la colección)
     all_docids = sorted(doc_map.keys())
 
-    # Logica de modo (disco o memoria)
-    indice_buffer = None
-    if args.mode == "memory":
-        print(
-            f"[TAAT] Modo MEMORIA seleccionado. Cargando {args.index_name}.bin en RAM..."
-        )
-        with open(index_path, "rb") as f:
-            indice_buffer = f.read()
-    else:
-        print("[TAAT] Modo DISCO seleccionado.")
-
+    print(f"\n{'='*70}")
+    print(f"[TAAT] EJECUCIÓN CON Y SIN MEMORIA")
+    print(f"{'='*70}")
     print(
         f"[TAAT] Vocabulario: {len(vocabulary)} términos | "
         f"Colección: {len(doc_map)} documentos"
     )
+    print(f"[TAAT] Índice: {args.index_name}")
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     path_queries = os.path.join(BASE_DIR, "EFF-10K-queries.txt")
-    # path_queries = os.path.join(BASE_DIR, "test.txt")
     path_stopwords = os.path.join(BASE_DIR, "stopwords.txt")
 
     queries = load_queries(path_queries, path_stopwords)
@@ -686,21 +800,93 @@ def main():
     queries_2 = filter_by_length(queries, 2)
     queries_3 = filter_by_length(queries, 3)
 
-    print(f"Cantidad de querys con 2 terminos: {len(queries_2)}")
-    print("Ejecutando querys de 2 terminos (AND, OR, NOT)")
-    result_2 = evaluar_querys_dos_terminos(
-        queries_2, vocabulary, index_path, all_docids, doc_map, indice_buffer
+    print(f"\nQueries disponibles:")
+    print(f"  - Queries con 2 términos: {len(queries_2)}")
+    print(f"  - Queries con 3 términos: {len(queries_3)}")
+
+    # ================ EJECUCIÓN SIN MEMORIA (DISK) ================
+    print(f"\n{'='*70}")
+    print(f"FASE 1: EJECUCIÓN CON ÍNDICE EN DISCO")
+    print(f"{'='*70}")
+
+    print(f"\nEjecutando queries Q=2 (DISK)...")
+    result_2_disk = evaluar_querys_dos_terminos(
+        queries_2, vocabulary, index_path, all_docids, doc_map, indice_buffer=None
     )
-    # print(result_2)
+    imprimir_estadisticas(result_2_disk, "2")
 
-    print(f"Cantidad de querys con 3 terminos: {len(queries_3)}")
-    print("Ejecutando querys de 3 terminos (AND-AND, OR-AND-NOT, AND-NOT)")
-    result_3 = evaluar_querys_tres_terminos(queries_3, vocabulary, index_path, all_docids, doc_map, indice_buffer)
-    # print(result_3)
+    print(f"\nEjecutando queries Q=3 (DISK)...")
+    result_3_disk = evaluar_querys_tres_terminos(
+        queries_3, vocabulary, index_path, all_docids, doc_map, indice_buffer=None
+    )
+    imprimir_estadisticas(result_3_disk, "3")
+
+    # Generar gráficos individuales para DISK
+    analizar_resultados(result_2_disk, "disk", "2")
+    analizar_resultados(result_3_disk, "disk", "3")
+
+    # ================ EJECUCIÓN CON MEMORIA (MEMORY) ================
+    print(f"\n{'='*70}")
+    print(f"FASE 2: EJECUCIÓN CON ÍNDICE EN MEMORIA")
+    print(f"{'='*70}")
+    print(f"Cargando {args.index_name}.bin en RAM...")
+    with open(index_path, "rb") as f:
+        indice_buffer = f.read()
+    print(f"Índice cargado en memoria ({len(indice_buffer)} bytes)")
+
+    print(f"\nEjecutando queries Q=2 (MEMORY)...")
+    result_2_memory = evaluar_querys_dos_terminos(
+        queries_2, vocabulary, index_path, all_docids, doc_map, indice_buffer=indice_buffer
+    )
+    imprimir_estadisticas(result_2_memory, "2")
+
+    print(f"\nEjecutando queries Q=3 (MEMORY)...")
+    result_3_memory = evaluar_querys_tres_terminos(
+        queries_3, vocabulary, index_path, all_docids, doc_map, indice_buffer=indice_buffer
+    )
+    imprimir_estadisticas(result_3_memory, "3")
+
+    # Generar gráficos individuales para MEMORY
+    analizar_resultados(result_2_memory, "memory", "2")
+    analizar_resultados(result_3_memory, "memory", "3")
+
+    # ================ GRÁFICOS COMPARATIVOS ================
+    print(f"\n{'='*70}")
+    print(f"GENERANDO GRÁFICOS COMPARATIVOS")
+    print(f"{'='*70}")
+    graficar_comparacion_modos(result_2_disk, result_2_memory, "2")
+    graficar_comparacion_modos(result_3_disk, result_3_memory, "3")
+
+    # ================ RESUMEN COMPARATIVO ================
+    print(f"\n{'='*70}")
+    print(f"RESUMEN: COMPARACIÓN DISK vs MEMORY")
+    print(f"{'='*70}")
     
-    analizar_resultados(result_2, args.mode)
-    analizar_resultados(result_3, args.mode)
+    print(f"\nQUERIES Q=2:")
+    for op in ["AND", "OR", "NOT"]:
+        if result_2_disk[op] and result_2_memory[op]:
+            df_disk = pd.DataFrame(result_2_disk[op])
+            df_memory = pd.DataFrame(result_2_memory[op])
+            promedio_disk = df_disk['tiempo'].mean()
+            promedio_memory = df_memory['tiempo'].mean()
+            diferencia = ((promedio_disk - promedio_memory) / promedio_memory) * 100
+            print(f"\n  {op}:")
+            print(f"    - DISK:   {promedio_disk:.6f} seg (promedio)")
+            print(f"    - MEMORY: {promedio_memory:.6f} seg (promedio)")
+            print(f"    - Mejora: {abs(diferencia):.2f}% {'más rápido' if diferencia > 0 else 'más lento'} en MEMORY")
 
+    print(f"\nQUERIES Q=3:")
+    for op in ["AND-AND", "OR-AND-NOT", "AND-OR"]:
+        if result_3_disk[op] and result_3_memory[op]:
+            df_disk = pd.DataFrame(result_3_disk[op])
+            df_memory = pd.DataFrame(result_3_memory[op])
+            promedio_disk = df_disk['tiempo'].mean()
+            promedio_memory = df_memory['tiempo'].mean()
+            diferencia = ((promedio_disk - promedio_memory) / promedio_memory) * 100
+            print(f"\n  {op}:")
+            print(f"    - DISK:   {promedio_disk:.6f} seg (promedio)")
+            print(f"    - MEMORY: {promedio_memory:.6f} seg (promedio)")
+            print(f"    - Mejora: {abs(diferencia):.2f}% {'más rápido' if diferencia > 0 else 'más lento'} en MEMORY")
 
 if __name__ == "__main__":
     main()

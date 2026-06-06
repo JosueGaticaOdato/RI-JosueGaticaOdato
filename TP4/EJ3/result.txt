@@ -1,0 +1,183 @@
+======================================================================
+[TAAT] EJECUCIÓN CON Y SIN MEMORIA
+======================================================================
+[TAAT] Vocabulario: 373985 términos | Colección: 6043 documentos
+[TAAT] Índice: index-small
+
+Queries disponibles:
+  - Queries con 2 términos: 3630
+  - Queries con 3 términos: 2199
+
+======================================================================
+FASE 1: EJECUCIÓN CON ÍNDICE EN DISCO
+======================================================================
+
+Ejecutando queries Q=2 (DISK)...
+
+============================================================
+ESTADÍSTICAS - Queries Q=2
+============================================================
+
+AND:
+  Cantidad de queries: 1657
+  Tiempo promedio: 0.000354 segundos
+  Tiempo mínimo: 0.000150 segundos
+  Tiempo máximo: 0.014837 segundos
+  Desv. estándar: 0.000518 segundos
+
+OR:
+  Cantidad de queries: 1657
+  Tiempo promedio: 0.000413 segundos
+  Tiempo mínimo: 0.000131 segundos
+  Tiempo máximo: 0.008267 segundos
+  Desv. estándar: 0.000830 segundos
+
+NOT:
+  Cantidad de queries: 1657
+  Tiempo promedio: 0.005752 segundos
+  Tiempo mínimo: 0.002716 segundos
+  Tiempo máximo: 0.015972 segundos
+  Desv. estándar: 0.000922 segundos
+
+Ejecutando queries Q=3 (DISK)...
+
+============================================================
+ESTADÍSTICAS - Queries Q=3
+============================================================
+
+AND-AND:
+  Cantidad de queries: 936
+  Tiempo promedio: 0.000505 segundos
+  Tiempo mínimo: 0.000203 segundos
+  Tiempo máximo: 0.004878 segundos
+  Desv. estándar: 0.000673 segundos
+
+OR-AND-NOT:
+  Cantidad de queries: 936
+  Tiempo promedio: 0.006783 segundos
+  Tiempo mínimo: 0.004109 segundos
+  Tiempo máximo: 0.018705 segundos
+  Desv. estándar: 0.001985 segundos
+
+AND-OR:
+  Cantidad de queries: 936
+  Tiempo promedio: 0.000653 segundos
+  Tiempo mínimo: 0.000209 segundos
+  Tiempo máximo: 0.008124 segundos
+  Desv. estándar: 0.000835 segundos
+Generando graficos para modo: disk, Query size: 2
+Gráfico guardado: plots-Q2-disk.png
+Generando graficos para modo: disk, Query size: 3
+Gráfico guardado: plots-Q3-disk.png
+
+======================================================================
+FASE 2: EJECUCIÓN CON ÍNDICE EN MEMORIA
+======================================================================
+Cargando index-small.bin en RAM...
+Índice cargado en memoria (15052448 bytes)
+
+Ejecutando queries Q=2 (MEMORY)...
+
+============================================================
+ESTADÍSTICAS - Queries Q=2
+============================================================
+
+AND:
+  Cantidad de queries: 1657
+  Tiempo promedio: 0.000140 segundos
+  Tiempo mínimo: 0.000015 segundos
+  Tiempo máximo: 0.004379 segundos
+  Desv. estándar: 0.000366 segundos
+
+OR:
+  Cantidad de queries: 1657
+  Tiempo promedio: 0.000289 segundos
+  Tiempo mínimo: 0.000014 segundos
+  Tiempo máximo: 0.009240 segundos
+  Desv. estándar: 0.000864 segundos
+
+NOT:
+  Cantidad de queries: 1657
+  Tiempo promedio: 0.005746 segundos
+  Tiempo mínimo: 0.002609 segundos
+  Tiempo máximo: 0.021695 segundos
+  Desv. estándar: 0.001056 segundos
+
+Ejecutando queries Q=3 (MEMORY)...
+
+============================================================
+ESTADÍSTICAS - Queries Q=3
+============================================================
+
+AND-AND:
+  Cantidad de queries: 936
+  Tiempo promedio: 0.000287 segundos
+  Tiempo mínimo: 0.000018 segundos
+  Tiempo máximo: 0.005297 segundos
+  Desv. estándar: 0.000691 segundos
+
+OR-AND-NOT:
+  Cantidad de queries: 936
+  Tiempo promedio: 0.006645 segundos
+  Tiempo mínimo: 0.003837 segundos
+  Tiempo máximo: 0.018957 segundos
+  Desv. estándar: 0.001983 segundos
+
+AND-OR:
+  Cantidad de queries: 936
+  Tiempo promedio: 0.000498 segundos
+  Tiempo mínimo: 0.000022 segundos
+  Tiempo máximo: 0.097186 segundos
+  Desv. estándar: 0.003270 segundos
+Generando graficos para modo: memory, Query size: 2
+Gráfico guardado: plots-Q2-memory.png
+Generando graficos para modo: memory, Query size: 3
+Gráfico guardado: plots-Q3-memory.png
+
+======================================================================
+GENERANDO GRÁFICOS COMPARATIVOS
+======================================================================
+
+Generando gráficos comparativos para Q=2
+Gráfico comparativo guardado: plots-Q2-comparacion.png
+
+Generando gráficos comparativos para Q=3
+Gráfico comparativo guardado: plots-Q3-comparacion.png
+
+======================================================================
+RESUMEN: COMPARACIÓN DISK vs MEMORY
+======================================================================
+
+QUERIES Q=2:
+
+  AND:
+    - DISK:   0.000354 seg (promedio)
+    - MEMORY: 0.000140 seg (promedio)
+    - Mejora: 152.39% más rápido en MEMORY
+
+  OR:
+    - DISK:   0.000413 seg (promedio)
+    - MEMORY: 0.000289 seg (promedio)
+    - Mejora: 43.22% más rápido en MEMORY
+
+  NOT:
+    - DISK:   0.005752 seg (promedio)
+    - MEMORY: 0.005746 seg (promedio)
+    - Mejora: 0.12% más rápido en MEMORY
+
+QUERIES Q=3:
+
+  AND-AND:
+    - DISK:   0.000505 seg (promedio)
+    - MEMORY: 0.000287 seg (promedio)
+    - Mejora: 76.00% más rápido en MEMORY
+
+  OR-AND-NOT:
+    - DISK:   0.006783 seg (promedio)
+    - MEMORY: 0.006645 seg (promedio)
+    - Mejora: 2.08% más rápido en MEMORY
+
+  AND-OR:
+    - DISK:   0.000653 seg (promedio)
+    - MEMORY: 0.000498 seg (promedio)
+    - Mejora: 31.04% más rápido en MEMORY

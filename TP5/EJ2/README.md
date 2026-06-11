@@ -1,6 +1,20 @@
-# Ejercicio 4
+# Ejercicio 2
 
-Suponga que se han recuperado un conjunto de páginas de un pequeño repositorio de sólo seis utilizando el modelo de espacio vectorial. Dado un query Q se produjo la salida de la siguiente con los valores de sim(Q, Di).
+Modifique su programa anterior para implementar un crawler básico de acuerdo al algoritmo presentado en la siguiente figura
 
-Las páginas se encuentran vinculadas de acuerdo al siguiente grafo:
+![Captura de pantalla](algoritmo.png)
 
+Luego, realice una pequeña recolección con los siguientes parámetros:
+
+* a) Conjunto semilla: los 20 primeros sitios del ranking de Netcraft
+* b) Cantidad Máxima de Páginas por sitio: [20-50]
+* c) Profundidad Lógica Máxima: 3
+* d) Profundidad Física Máxima: 3
+
+Luego de la descarga, arme el grafo correspondiente. Grafique utilizando la librería pyvis
+
+## Ejecucion
+
+```bash
+python TP5/EJ2/EJ2.py
+```

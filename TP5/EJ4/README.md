@@ -15,3 +15,5 @@ Las páginas se encuentran vinculadas de acuerdo al siguiente grafo:
 
 * a) Calcule los valores de PageRank de las páginas utilizando como factor de damp 0.15 y 0.5. Pruebe iterando 2, 5 y 10 veces.
 * b) Use los valores de PageRank para re-rankear la salida de la búsqueda interpolando los valores (controlado por un parámetro α). ¿Se altera el ranking? ¿En qué caso? Comente los resultados.
+
+![Captura de pantalla](grafo.png)

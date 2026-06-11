@@ -1,0 +1,20 @@
+Correcciones en clase (10/6):
+
+1.
+
+2.
+
+3.
+
+4.
+
+5. No cargar las postings a memoria de todos los terminos que voy a hacer el AND.
+Me cargo amemoria toda la posting mas corta de las 3, y si me cargo a memoria las otras skip.
+Cuando encuentro el rango, voy a buscar a disco ese pedacito.
+Espiritu: ahorrar SEEKs
+
+Posting lists: EN LISTA DE PYTHON, NO EN DICCIONARIO
+
+6.
+
+7.

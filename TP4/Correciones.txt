@@ -1,0 +1,14 @@
+Punto 1: OK.
+
+Punto 2: OK.
+
+Punto 3: OK. Cuando menciona que ""Según la operación que se  realice, el tamaño de la posting varia"", lo que  varía es la cantidad de posting/comparaciones que el algoritmo 
+procesa/realiza.
+
+Punto 4: OK.
+
+Punto 5: Revisar. La implementación carga las posting lists y las skips en memoria, por lo que no "ahorra" I/O. Tampoco carga los bloques bajo demanda. if len(posting1) <= len(posting2): puede usar el df del vocabulario. Las skips se crean en tiempo de ejecucion.
+
+Punto 6: OK.
+
+Punto 7: OK.

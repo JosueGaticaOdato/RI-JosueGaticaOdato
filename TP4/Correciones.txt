@@ -9,6 +9,13 @@ Punto 4: OK.
 
 Punto 5: Revisar. La implementación carga las posting lists y las skips en memoria, por lo que no "ahorra" I/O. Tampoco carga los bloques bajo demanda. if len(posting1) <= len(posting2): puede usar el df del vocabulario. Las skips se crean en tiempo de ejecucion.
 
+No cargar las postings a memoria de todos los terminos que voy a hacer el AND.
+Me cargo amemoria toda la posting mas corta de las 3, y si me cargo a memoria las otras skip.
+Cuando encuentro el rango, voy a buscar a disco ese pedacito.
+Espiritu: ahorrar SEEKs
+
+Posting lists: EN LISTA DE PYTHON, NO EN DICCIONARIO
+
 Punto 6: OK.
 
 Punto 7: OK.

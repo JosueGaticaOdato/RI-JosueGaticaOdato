@@ -9,17 +9,18 @@ from pyvis.network import Network
 
 HEADERS = {
    "User-Agent": "Mozilla/5.0",
-   "Accept-Language": "en-US,en;q=0.9"
 }
 
 CANTIDAD_MAXIMA_PAGINAS_POR_SITIO = 50 # Cuantas paginas se pueden visitar por dominio
 PROFUNDIDAD_LOGICA_MAXIMA = 2 # Profundidad maxima del crawler, cuantos saltos desde la semilla
 PROFUNDIDAD_FISICA_MAXIMA = 2 # Arquitectura de directorios (cantidad de barras de la URL)
 
-SEMILLA = [
-   "https://www.unlu.edu.ar"
-]
+BASE_DOMINIO = "https://www.unlu.edu.ar"
 
+# Extensiones a evitar en el sitio acadmemico
+EXTENSIONES_EXCLUIDAS = (
+    ".pdf", ".jpg", ".png", ".zip", ".doc", ".docx", ".xls", ".xlsx", ".mp4"
+)
 # --------------- FUNCIONES ------------------
 
 def obtener_enlaces(url: str = None, proxy=None):
@@ -63,6 +64,24 @@ def parse_url(base_url, link):
    
    return urljoin(base_url, link) # Relativa pasa a absoluta
 
+def es_dominio_valido(url):
+  "Dada una URL, determina si pertenece o no al dominio base"
+  
+  if not url:
+     return False
+  
+  dominio = urlparse(url).netloc
+  
+  # Solo dominio BASE
+  if BASE_DOMINIO not in dominio:
+     return False
+  
+  # Evitar archivos pesados
+  if url.lower().endswith(EXTENSIONES_EXCLUIDAS):
+      return False
+
+  return True
+
 def es_amazon(url):
    "Me dice si la URL pertenece o no a amazon"
    dominio = urlparse(url).netloc
@@ -75,8 +94,17 @@ def es_dinamica(url):
     return (
         len(parsed.query) > 0 or
         "?" in url or
-        any(x in parsed.path.lower() for x in ["session", "ref", "utm", "track"])
+        any(x in parsed.path.lower() for x in ["id", "page", "view"])
     )
+
+# profundidad física = cantidad de segmentos en el path
+def profundidad_fisica(url):
+    "Dada una URL, devuelvo la profundidad fisica"
+    path = urlparse(url).path
+    if path == "" or path == "/":
+        return 0
+
+    return len([p for p in path.split("/") if p])
 
 # ----------------- CRAWLER -----------------
 
@@ -117,7 +145,7 @@ def crawler(semilla):
       if url in done_list:
          continue
       
-      if not es_amazon(url):
+      if not es_dominio_valido(url):
         continue
     
       dominio = obtener_dominio(url)
@@ -147,7 +175,9 @@ def crawler(semilla):
          estadisticas["estaticas"] += 1
         
       estadisticas["profundidad_logica"][profundidad] += 1
-      estadisticas["profundidad_fisica"][profundidad] += 1
+
+      pf = profundidad_fisica(url)
+      estadisticas["profundidad_fisica"][pf] += 1
 
       # ---------------- GRAFO ---------------
 
@@ -155,7 +185,7 @@ def crawler(semilla):
       for link in enlaces:
          
          # Solo links amazon
-         if not es_amazon(link):
+         if not es_dominio_valido(link):
             continue
          
          # Agrego al grafo
@@ -249,7 +279,9 @@ def armar_graficos(stats):
 
 if __name__ == "__main__":
 
-  grafo, stats = crawler(semilla=SEMILLA)
+  semilla = ["https://www.unlu.edu.ar/"]
+
+  grafo, stats = crawler(semilla=semilla)
   
   visualizar_grafo(grafo)
 
@@ -257,5 +289,12 @@ if __name__ == "__main__":
   print("DINÁMICAS:", stats["dinamicas"])
   print("ESTÁTICAS:", stats["estaticas"])
 
+  # print("\nProfundidad lógica:")
+  # for k, v in sorted(stats["por_profundidad_logica"].items()):
+  #     print(k, v)
+
+  # print("\nProfundidad física:")
+  # for k, v in sorted(stats["por_profundidad_fisica"].items()):
+  #     print(k, v)
+
   armar_graficos(stats)
-  #print(obtener_enlaces("https://es.wikipedia.org/wiki/Argentina"))

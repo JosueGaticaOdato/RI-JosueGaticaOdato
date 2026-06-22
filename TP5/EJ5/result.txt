@@ -1,0 +1,69 @@
+============================================================
+  PageRank, HITS y simulación de overlap
+============================================================
+  Dominio  : unlu.edu.ar
+  Páginas  : 11
+  Top-K Auth (ground truth): 50
+============================================================
+
+ Cargando datos desde caché: TP5/EJ5/crawl_cache_ej5.json
+
+  Páginas cargadas: 500
+
+ Grafo NetworkX construido:
+   Nodos : 100
+   Aristas: 3491
+
+Calculando PageRank...
+ PageRank calculado.
+Calculando HITS (Hubs & Authorities)...
+  HITS calculado.
+
+==============================================================
+  REPORTE DE SIMULACIÓN
+==============================================================
+  Páginas totales : 500
+  Top-K Auth (GT) : 50
+
+  Estrategia: PageRank ↓
+    AUC normalizada           : 4.2582
+    Páginas para cubrir  25%  : 4
+    Páginas para cubrir  50%  : 14
+    Páginas para cubrir  75%  : 17
+    Páginas para cubrir 100%  : 27
+
+  Estrategia: FIFO
+    AUC normalizada           : 2.3648
+    Páginas para cubrir  25%  : 27
+    Páginas para cubrir  50%  : 31
+    Páginas para cubrir  75%  : 42
+    Páginas para cubrir 100%  : 70
+
+  Correlación Pearson PR ↔ Auth : 0.1305
+  Overlap top-50 PR ∩ Auth : 13 páginas
+  Jaccard index             : 0.2600
+==============================================================
+
+── Top-10 PageRank ──────────────────────────────────
+   1. https://guiatel.unlu.edu.ar/                                       PR=0.181055
+   2. https://guiatel.unlu.edu.ar/                                       PR=0.181055
+   3. https://guiatel.unlu.edu.ar/                                       PR=0.181055
+   4. https://guiatel.unlu.edu.ar/                                       PR=0.181055
+   5. https://guiatel.unlu.edu.ar/                                       PR=0.181055
+   6. https://guiatel.unlu.edu.ar/                                       PR=0.181055
+   7. https://www.unlu.edu.ar                                            PR=0.043178
+   8. https://www.prensa.unlu.edu.ar/                                    PR=0.030984
+   9. https://www.prensa.unlu.edu.ar/                                    PR=0.030984
+  10. https://www.prensa.unlu.edu.ar/                                    PR=0.030984
+
+── Top-10 Authority (HITS) ──────────────────────────
+   1. https://guiatel.unlu.edu.ar/                                       Auth=0.014430
+   2. https://guiatel.unlu.edu.ar/                                       Auth=0.014430
+   3. https://guiatel.unlu.edu.ar/                                       Auth=0.014430
+   4. https://guiatel.unlu.edu.ar/                                       Auth=0.014430
+   5. https://guiatel.unlu.edu.ar/                                       Auth=0.014430
+   6. https://guiatel.unlu.edu.ar/                                       Auth=0.014430
+   7. https://ri.unlu.edu.ar/                                            Auth=0.014205
+   8. https://ri.unlu.edu.ar/                                            Auth=0.014205
+   9. https://ri.unlu.edu.ar/                                            Auth=0.014205
+  10. https://ri.unlu.edu.ar/                                            Auth=0.014205

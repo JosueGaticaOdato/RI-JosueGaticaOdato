@@ -1,0 +1,20 @@
+Crawling finalizado. Páginas visitadas: 200
+
+==================================================
+  ANÁLISIS DE RESULTADOS
+==================================================
+  Total de páginas crawleadas : 200
+  Dinámicas                   : 78 (39.0%)
+  Estáticas                   : 122 (61.0%)
+
+  Distribución por Profundidad Lógica:
+    PL=0 : 84 páginas
+    PL=1 : 106 páginas
+    PL=2 : 10 páginas
+
+  Distribución por Profundidad Física:
+    PF=0 : 117 páginas
+    PF=1 : 83 páginas
+==================================================
+  Grafo guardado en: TP5/EJ3/grafo_unlu.html
+  Nodos: 329

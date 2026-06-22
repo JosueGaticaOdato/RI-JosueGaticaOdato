@@ -11,6 +11,7 @@ from pyvis.network import Network
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MiniCrawler/1.0)"}
 
+MAX_PAGINAS = 1000
 MAX_PAGINAS_POR_SITIO = 20 # Cuantas paginas se pueden visitar por dominio
 MAX_PROF_LOGICA = 3  # Profundidad maxima del crawler, cuantos saltos desde la semilla
 MAX_PROF_FISICA = 3  # Arquitectura de directorios (cantidad de barras de la URL)
@@ -209,7 +210,7 @@ class Crawler:
 
         total = 0
 
-        while self.frontier:
+        while self.frontier and total < MAX_PAGINAS:
             url, dominio_origen, prof_logica, prof_fisica = self.frontier.popleft()
 
             if not self.permite_crawl(url, dominio_origen, prof_logica, prof_fisica):

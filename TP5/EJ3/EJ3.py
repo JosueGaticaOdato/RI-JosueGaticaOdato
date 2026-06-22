@@ -1,51 +1,74 @@
+import time
+
 import matplotlib.pyplot as plt
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from collections import deque, defaultdict
 from pyvis.network import Network
+from functools import lru_cache
 
 # --------------- CONSTANTES ----------------
 
-HEADERS = {
-   "User-Agent": "Mozilla/5.0",
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MiniCrawler/1.0)"}
+
+MAX_PAGINAS = 200  # Cuantas paginas se pueden visitar por dominio
+MAX_PROF_LOGICA = 3  # Profundidad maxima del crawler, cuantos saltos desde la semilla
+MAX_PROF_FISICA = 3  # Arquitectura de directorios (cantidad de barras de la URL)
+
+DELAY_REQUEST = 0.5
+TIMEOUT = 10
+
+URL_SEMILLA = "https://www.unlu.edu.ar"
+DOMINIO_OBJETIVO = "unlu.edu.ar"  # Solo se crawlea dentro de este dominio
+
+# Extensiones de pagina dinamica
+EXT_DINAMICAS = {
+    ".php",
+    ".asp",
+    ".aspx",
+    ".jsp",
+    ".cgi",
+    ".cfm",
+    ".do",
+    ".action",
+    ".py",
 }
 
-CANTIDAD_MAXIMA_PAGINAS_POR_SITIO = 50 # Cuantas paginas se pueden visitar por dominio
-PROFUNDIDAD_LOGICA_MAXIMA = 2 # Profundidad maxima del crawler, cuantos saltos desde la semilla
-PROFUNDIDAD_FISICA_MAXIMA = 2 # Arquitectura de directorios (cantidad de barras de la URL)
+# Extensiones de pagina estatica
+EXT_ESTATICAS_NO_HTML = {
+    ".html",
+    ".htm",
+    ".shtml",
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".ppt",
+    ".pptx",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".svg",
+    ".ico",
+    ".webp",
+    ".css",
+    ".js",
+    ".xml",
+    ".txt",
+    ".csv",
+    ".zip",
+    ".rar",
+    ".mp3",
+    ".mp4",
+    ".avi",
+    ".mov",
+}
 
-BASE_DOMINIO = "https://www.unlu.edu.ar"
-
-# Extensiones a evitar en el sitio acadmemico
-EXTENSIONES_EXCLUIDAS = (
-    ".pdf", ".jpg", ".png", ".zip", ".doc", ".docx", ".xls", ".xlsx", ".mp4"
-)
 # --------------- FUNCIONES ------------------
 
-def obtener_enlaces(url: str = None, proxy=None):
-    "Dada una URL, descarga la pagina y obtengo los enlaces. Todos los enlaces estan normalizados"
-    try:
-        # Descargar la pagina
-        response = requests.get(url, headers=HEADERS, timeout=5)
-
-        # Parser
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        links = []
-
-        # Buscar todos los hipervinculos
-        for a in soup.find_all("a", href=True):
-          href = a.get("href")
-
-          full_url = parse_url(url, href) # Normalizo
-
-          links.append(full_url)
-
-        return links
-    except Exception as e:
-        print(f"Error en {url}: {e}")
-        return []
 
 def obtener_dominio(url):
     """
@@ -54,247 +77,399 @@ def obtener_dominio(url):
     """
     return urlparse(url).netloc
 
-def parse_url(base_url, link):
-   "Dada una URL y su link, normalizo el enlace"
-   if urlparse(link).fragment: # Si tiene fragmento, descarto
-      link = link.split("#")[0]
-  
-   if urlparse(link).scheme: # URL absoluta, devuelve tal cual
-      return link
-   
-   return urljoin(base_url, link) # Relativa pasa a absoluta
 
-def es_dominio_valido(url):
-  "Dada una URL, determina si pertenece o no al dominio base"
-  
-  if not url:
-     return False
-  
-  dominio = urlparse(url).netloc
-  
-  # Solo dominio BASE
-  if BASE_DOMINIO not in dominio:
-     return False
-  
-  # Evitar archivos pesados
-  if url.lower().endswith(EXTENSIONES_EXCLUIDAS):
-      return False
+def profundidad_fisica(url):
+    """
+    Profundidad fisica: cantidad de segmentos de path no vacios (cantidad de barras)
+    Ejemplo: https://example.com/a/b/c  ->  3
+              https://example.com/  ->  0
+    """
+    path = urlparse(url).path
+    segmentos = [s for s in path.split("/") if s]
+    return len(segmentos)
 
-  return True
 
-def es_amazon(url):
-   "Me dice si la URL pertenece o no a amazon"
-   dominio = urlparse(url).netloc
-   return "amazon." in dominio
+def es_mismo_dominio(url: str, dominio: str) -> bool:
+    """
+    Verifica si la URL pertenece al dominio objetivo (incluyendo subdominios).
+    Ej: 'posgrado.unlu.edu.ar' sigue siendo parte de 'unlu.edu.ar'
+    """
+    netloc = obtener_dominio(url)
+    return netloc == dominio or netloc.endswith("." + dominio)
 
-def es_dinamica(url):
-    "Determina si una pagina es dinamica"
+
+def clasificar_pagina(url: str) -> str:
+    """
+    Clasifica una URL como 'dinamica' o 'estatica'.
+
+    Criterios:
+    - Dinámica: tiene query string (?) O la extensión del path es dinámica
+    - Estática: todo lo demás (HTML puro, sin query string, recursos estáticos)
+    """
     parsed = urlparse(url)
 
-    return (
-        len(parsed.query) > 0 or
-        "?" in url or
-        any(x in parsed.path.lower() for x in ["id", "page", "view"])
-    )
+    # Query string presente, entonces es dinámica
+    if parsed.query:
+        return "dinamica"
 
-# profundidad física = cantidad de segmentos en el path
-def profundidad_fisica(url):
-    "Dada una URL, devuelvo la profundidad fisica"
-    path = urlparse(url).path
-    if path == "" or path == "/":
-        return 0
+    # Analizar extensión del path
+    path = parsed.path.rstrip("/")
+    if "." in path.split("/")[-1]:
+        ext = "." + path.split(".")[-1].lower()
+        if ext in EXT_DINAMICAS:
+            return "dinamica"
 
-    return len([p for p in path.split("/") if p])
+    return "estatica"
 
-# ----------------- CRAWLER -----------------
 
-# Frontier: cola FIFO
-def crawler(semilla):
-    "Genera el corpus de documento dada una semilla de sitios"
+def normalizar_url(base_url, href):
+    """
+    Convierte un href relativo en absoluto y descarta fragmentos y
+    esquemas no HTTP/HTTPS.
+    """
+    if not href:
+        return None
 
-    todo_list = deque() # Cola de URLs por visitar
-    done_list = set()   # URLs ya visitadas
+    # Eliminar fragmento
+    if "#" in href:
+        href = href.split("#")[0]
+    if not href:
+        return None
 
-    # Contador de paginas por dominio
-    paginas_por_sitio = defaultdict(int)
+    parsed = urlparse(href)
 
-    # Grafo dirigido
-    # clave = url
-    # valor = lista de urls destino
-    grafo = defaultdict(list)
+    # Descartar esquemas que no sean http/https (mailto:, javascript:, etc.)
+    if parsed.scheme and parsed.scheme not in ("http", "https"):
+        return None
 
-    # Estadisticas
-    estadisticas = {
-        "dinamicas": 0,
-        "estaticas": 0,
-        "profundidad_logica": defaultdict(int),
-        "profundidad_fisica": defaultdict(int),
-        "total_urls": 0
-    }
+    # Convertir relativa a absoluta
+    full = urljoin(base_url, href)
 
-    # Inicializado la semilla
-    for url in semilla:
-       todo_list.append((url,0)) # Profundidad sero porque recien arranco
+    # Verificar esquema final
+    if not full.startswith(("http://", "https://")):
+        return None
 
-    # Mientras tenga URLs por recorrer
-    while todo_list:
-       
-      url, profundidad = todo_list.popleft()
+    return full
 
-      # La salto si ya la visite
-      if url in done_list:
-         continue
-      
-      if not es_dominio_valido(url):
-        continue
-    
-      dominio = obtener_dominio(url)
 
-      # Si paso la restriccion de la profundad y la cantidad maxima, salto
-      if paginas_por_sitio[dominio] >= CANTIDAD_MAXIMA_PAGINAS_POR_SITIO:
-         continue
-    
-      if profundidad > PROFUNDIDAD_LOGICA_MAXIMA:
-         continue
+@lru_cache
+def obtener_pagina(url: str):
+    "Descarga una página y devuelve el objeto Response o None si falla."
+    try:
 
-      print(f"[{profundidad}] Crawling: {url}")
+        # Descargar la pagina
+        response = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+        response.raise_for_status()
+        return response
+    except requests.exceptions.RequestException as e:
+        print(f"    [ERROR] {url} -> {e}")
+        return None
 
-      enlaces = obtener_enlaces(url)
 
-      # Agrego a la URL ya visitada y subo el contador del dominio
-      done_list.add(url)
-      paginas_por_sitio[dominio] += 1
+def extraer_enlaces(url: str, contenido: bytes) -> list[str]:
+    "Parsea el HTML y devuelve lista de URLs absolutas normalizadas."
 
-      # --------------- METRICAS ----------------
+    # Parser
+    soup = BeautifulSoup(contenido, "html.parser")
+    enlaces = []
 
-      estadisticas["total_urls"] += 1
+    # Buscar todos los hipervinculos
+    for a in soup.find_all("a", href=True):
+        normalizada = normalizar_url(url, a["href"])  # Normalizo
+        if normalizada:
+            enlaces.append(normalizada)
+    return enlaces
 
-      if es_dinamica(url):
-         estadisticas["dinamicas"] += 1
-      else:
-         estadisticas["estaticas"] += 1
-        
-      estadisticas["profundidad_logica"][profundidad] += 1
 
-      pf = profundidad_fisica(url)
-      estadisticas["profundidad_fisica"][pf] += 1
+# -------- REGISTRO DE LA PAGINA --------------
 
-      # ---------------- GRAFO ---------------
 
-      #print(len(enlaces))
-      for link in enlaces:
-         
-         # Solo links amazon
-         if not es_dominio_valido(link):
+class InfoPagina:
+    "Datos recolectados de una página crawleada."
+
+    def __init__(self, url: str, prof_logica: int, prof_fisica: int):
+        self.url = url
+        self.prof_logica = prof_logica
+        self.prof_fisica = prof_fisica
+        self.tipo = clasificar_pagina(url)  # 'dinamica' | 'estatica'
+
+    def __repr__(self):
+        return (
+            f"InfoPagina(url={self.url!r}, PL={self.prof_logica}, "
+            f"PF={self.prof_fisica}, tipo={self.tipo!r})"
+        )
+
+
+# ---------------- CRAWLER --------------------
+
+
+def crawler():
+    "Implementa el algoritmo de crawling con una pagina."
+
+    frontier: deque = deque()
+    done_list: set[str] = set()
+    grafo: dict[str, list[str]] = {}
+    paginas_info: list[InfoPagina] = []
+
+    # Semilla: profundidad lógica 0, profundidad física 0
+    frontier.append((URL_SEMILLA, 0, profundidad_fisica(URL_SEMILLA)))
+
+    total = 0
+
+    while frontier and total < MAX_PAGINAS:
+        url, pl, pf = frontier.popleft()
+
+        # ---------- Filtros ----------
+        if url in done_list:
             continue
-         
-         # Agrego al grafo
-         grafo[url].append(link)
+        if not es_mismo_dominio(url, DOMINIO_OBJETIVO):
+            continue
+        if pl > MAX_PROF_LOGICA:
+            continue
+        if pf > MAX_PROF_FISICA:
+            continue
 
-         if link not in done_list:
-            # Agrego a la lista con una profundidad mas
-            todo_list.append((link,profundidad+1))
-    
-    return grafo, estadisticas
+        # ---------- Descargar ----------
+        print(f"[{total+1:>3}] PL={pl} PF={pf} | {url}")
+        response = obtener_pagina(url)
+        if response is None:
+            done_list.add(url)  # Marcar para no reintentar
+            continue
 
-"""
-Algoritmo visto ne clase de crawler
-# Frontier: cola FIFO
-def crawler(frontier:Queue):
-    # Proceso mientras la cola no este vacia
-    while not frontier.empty():
-        # Recupero URL
-        url = frontier.get()
-        # Politicas para el crawler
-        if permite_crawl(url):
-            raw = obtener_enlaces(url)
-            # Almaceno el contenido del documento para armar la estructura de datos
-            store_document(url,raw.content)
-            # Normalizar URLs y meterlas en la cola
-            for link in parse_links(raw):
-                frontier.put(normalize(link))
-"""
+        # Solo procesar respuestas HTML
+        content_type = response.headers.get("Content-Type", "")
+        if "html" not in content_type:
+            done_list.add(url)
+            continue
 
-# ------------- CONSTRUI GRAFO --------------
+        # ---------- Registrar ----------
+        done_list.add(url)
+        total += 1
+        paginas_info.append(InfoPagina(url, pl, pf))
 
-def visualizar_grafo(grafo):
-  net = Network(height="800px", width="100%", directed=True)
+        # ---------- Extraer y encolar enlaces ----------
+        enlaces = extraer_enlaces(url, response.content)
+        grafo[url] = []
 
-  for src in grafo:
-      net.add_node(src, label=src)
+        for link in enlaces:
+            if not es_mismo_dominio(link, DOMINIO_OBJETIVO):
+                continue
+            grafo[url].append(link)
+            if link not in done_list:
+                nueva_pf = profundidad_fisica(link)
+                nuevo_dominio = obtener_dominio(link)
+                actual_dominio = obtener_dominio(url)
+                nueva_pl = pl + 1 if nuevo_dominio != actual_dominio else pl
+                frontier.append((link, nueva_pl, nueva_pf))
 
-      for dst in grafo[src]:
-          net.add_node(dst, label=dst)
-          net.add_edge(src, dst)
+        time.sleep(DELAY_REQUEST)
 
-  #net.show("grafo.html")
-  #net.show("grafo.html", notebook=False)
-  net.write_html("TP5/EJ2/grafo.html")
+    print(f"\nCrawling finalizado. Páginas visitadas: {total}")
+    return paginas_info, grafo
+
 
 # --------------- GRAFICOS ----------------
 
-def armar_graficos(stats):
-   
-  # Dinamica vs Estatica
-  labels = ["Dinámicas", "Estáticas"]
-  values = [stats["dinamicas"], stats["estaticas"]]
 
-  plt.figure()
-  plt.pie(values, labels=labels, autopct="%1.1f%%")
-  plt.title("Distribución de páginas dinámicas vs estáticas")
-  plt.savefig("TP5/EJ3/dinamica_vs_estatica.png", dpi=200, bbox_inches="tight")
-  plt.close()
-  
-  # Distribucion por profundidad
-  data = stats["profundidad_logica"]
+def analizar_y_graficar(paginas: list[InfoPagina]):
+    """
+    Genera y muestra tres gráficos:
+      1. Torta: distribución dinámicas vs estáticas
+      2. Barras: frecuencia por profundidad lógica
+      3. Barras: frecuencia por profundidad física
+    """
+    if not paginas:
+        print("No hay páginas para analizar.")
+        return
 
-  depths = list(data.keys())
-  counts = list(data.values())
+    # -------- Conteos --------
+    n_dinamicas = sum(1 for p in paginas if p.tipo == "dinamica")
+    n_estaticas = sum(1 for p in paginas if p.tipo == "estatica")
 
-  plt.figure()
-  plt.bar(depths, counts)
-  plt.xlabel("Profundidad")
-  plt.ylabel("Cantidad de páginas")
-  plt.title("Distribución por profundidad lógica")
-  plt.savefig("TP5/EJ3/profundidad.png", dpi=200, bbox_inches="tight")
-  plt.close()
+    dist_pl: dict[int, int] = defaultdict(int)
+    dist_pf: dict[int, int] = defaultdict(int)
+    for p in paginas:
+        dist_pl[p.prof_logica] += 1
+        dist_pf[p.prof_fisica] += 1
 
-  # Histograma de profundiadd
-  data = stats["profundidad_logica"]
+    # -------- Imprimir resumen --------
+    total = len(paginas)
+    print("\n" + "=" * 50)
+    print("  ANÁLISIS DE RESULTADOS")
+    print("=" * 50)
+    print(f"  Total de páginas crawleadas : {total}")
+    print(
+        f"  Dinámicas                   : {n_dinamicas} ({n_dinamicas/total*100:.1f}%)"
+    )
+    print(
+        f"  Estáticas                   : {n_estaticas} ({n_estaticas/total*100:.1f}%)"
+    )
+    print()
+    print("  Distribución por Profundidad Lógica:")
+    for nivel in sorted(dist_pl):
+        print(f"    PL={nivel} : {dist_pl[nivel]} páginas")
+    print()
+    print("  Distribución por Profundidad Física:")
+    for nivel in sorted(dist_pf):
+        print(f"    PF={nivel} : {dist_pf[nivel]} páginas")
+    print("=" * 50)
 
-  values = []
-  for profundidad, count in data.items():
-      values.extend([profundidad] * count)
+    # -------- Figura con 3 subplots --------
+    fig, axes = plt.subplots(1, 3, figsize=(16, 6))
+    fig.suptitle(
+        f"Análisis del crawling de {DOMINIO_OBJETIVO}\n({total} páginas)",
+        fontsize=14,
+        fontweight="bold",
+    )
 
-  plt.figure()
-  plt.hist(values, bins=range(max(values)+2), edgecolor="black")
-  plt.xlabel("Profundidad")
-  plt.ylabel("Frecuencia")
-  plt.title("Histograma de profundidad de crawling")
-  plt.savefig("TP5/EJ3/histograma.png", dpi=200, bbox_inches="tight")
-  #plt.show()
+    # -- 1. Torta dinámicas vs estáticas --
+    ax1 = axes[0]
+    labels = ["Dinámicas", "Estáticas"]
+    valores = [n_dinamicas, n_estaticas]
+    colores = ["#ef5350", "#42a5f5"]
+    explode = (0.05, 0.05)
+
+    # Evitar torta vacía si uno de los valores es 0
+    if all(v == 0 for v in valores):
+        ax1.text(0.5, 0.5, "Sin datos", ha="center", va="center")
+    else:
+        wedges, texts, autotexts = ax1.pie(
+            valores,
+            labels=labels,
+            colors=colores,
+            autopct="%1.1f%%",
+            explode=explode,
+            startangle=90,
+            textprops={"fontsize": 11},
+        )
+        for at in autotexts:
+            at.set_fontsize(11)
+            at.set_fontweight("bold")
+
+    ax1.set_title("Páginas Dinámicas vs Estáticas", fontsize=12, pad=15)
+
+    # -- 2. Barras profundidad lógica --
+    ax2 = axes[1]
+    niveles_pl = sorted(dist_pl.keys())
+    counts_pl = [dist_pl[n] for n in niveles_pl]
+
+    bars2 = ax2.bar(
+        [str(n) for n in niveles_pl],
+        counts_pl,
+        color="#66bb6a",
+        edgecolor="white",
+        linewidth=0.8,
+    )
+    ax2.bar_label(bars2, padding=3, fontsize=10, fontweight="bold")
+    ax2.set_title("Distribución por Profundidad Lógica", fontsize=12)
+    ax2.set_xlabel("Profundidad Lógica", fontsize=11)
+    ax2.set_ylabel("Cantidad de páginas", fontsize=11)
+    ax2.set_ylim(0, max(counts_pl, default=1) * 1.2)
+    ax2.grid(axis="y", linestyle="--", alpha=0.5)
+
+    # -- 3. Barras profundidad física --
+    ax3 = axes[2]
+    niveles_pf = sorted(dist_pf.keys())
+    counts_pf = [dist_pf[n] for n in niveles_pf]
+
+    bars3 = ax3.bar(
+        [str(n) for n in niveles_pf],
+        counts_pf,
+        color="#ffa726",
+        edgecolor="white",
+        linewidth=0.8,
+    )
+    ax3.bar_label(bars3, padding=3, fontsize=10, fontweight="bold")
+    ax3.set_title("Distribución por Profundidad Física", fontsize=12)
+    ax3.set_xlabel("Profundidad Física", fontsize=11)
+    ax3.set_ylabel("Cantidad de páginas", fontsize=11)
+    ax3.set_ylim(0, max(counts_pf, default=1) * 1.2)
+    ax3.grid(axis="y", linestyle="--", alpha=0.5)
+
+    plt.tight_layout()
+    plt.savefig("TP5/EJ3/analisis_ej3.png", dpi=150, bbox_inches="tight")
+    #print("\n Gráfico guardado en: analisis_unlu.png")
+
+
+# ------------- Pyvis ----------------------
+
+
+def construir_grafo_pyvis(
+    grafo: dict[str, list[str]],
+    paginas_info: list[InfoPagina],
+    output_file: str = "grafo_unlu.html",
+):
+    """
+    Genera el grafo de enlace interno de unlu.edu.ar con pyvis.
+    Color según tipo: azul=estática, rojo=dinámica
+    """
+    try:
+        from pyvis.network import Network
+    except ImportError:
+        print("pyvis no instalado. Saltando generación de grafo.")
+        return
+
+    tipo_map = {p.url: p.tipo for p in paginas_info}
+
+    net = Network(
+        height="800px",
+        width="100%",
+        directed=True,
+        bgcolor="#1a1a2e",
+        font_color="white",
+        notebook=False,
+    )
+    net.set_options("""
+    {
+      "nodes": { "shape": "dot", "size": 8, "font": { "size": 9 } },
+      "edges": {
+        "arrows": { "to": { "enabled": true, "scaleFactor": 0.4 } },
+        "color": { "opacity": 0.4 },
+        "smooth": { "type": "dynamic" }
+      },
+      "physics": {
+        "barnesHut": { "gravitationalConstant": -6000, "springLength": 120 },
+        "stabilization": { "iterations": 80 }
+      }
+    }
+    """)
+
+    nodos = set()
+    MAX_DEST = 5  # aristas por nodo para legibilidad
+
+    def add_node(url):
+        if url in nodos:
+            return
+        tipo = tipo_map.get(url, "estatica")
+        color = "#ef5350" if tipo == "dinamica" else "#42a5f5"
+        label = urlparse(url).path[:30] or "/"
+        net.add_node(url, label=label, color=color, title=f"{url}<br>Tipo: {tipo}")
+        nodos.add(url)
+
+    for origen, destinos in grafo.items():
+        add_node(origen)
+        for dest in destinos[:MAX_DEST]:
+            add_node(dest)
+            net.add_edge(origen, dest)
+
+    net.save_graph(output_file)
+    print(f"  Grafo guardado en: {output_file}")
+    print(f"  Nodos: {len(nodos)}")
 
 
 # ------------------- MAIN -----------------
 
 if __name__ == "__main__":
+    print("  CRAWLER unlu.edu.ar ")
+    print("=" * 60)
+    print(f"  Dominio objetivo   : {DOMINIO_OBJETIVO}")
+    print(f"  Máx. páginas       : {MAX_PAGINAS}")
+    print(f"  Prof. lógica máx   : {MAX_PROF_LOGICA}")
+    print(f"  Prof. física máx   : {MAX_PROF_FISICA}")
+    print("=" * 60 + "\n")
 
-  semilla = ["https://www.unlu.edu.ar/"]
-
-  grafo, stats = crawler(semilla=semilla)
-  
-  visualizar_grafo(grafo)
-
-  print("TOTAL URLs:", stats["total_urls"])
-  print("DINÁMICAS:", stats["dinamicas"])
-  print("ESTÁTICAS:", stats["estaticas"])
-
-  # print("\nProfundidad lógica:")
-  # for k, v in sorted(stats["por_profundidad_logica"].items()):
-  #     print(k, v)
-
-  # print("\nProfundidad física:")
-  # for k, v in sorted(stats["por_profundidad_fisica"].items()):
-  #     print(k, v)
-
-  armar_graficos(stats)
+    paginas, grafo = crawler()
+ 
+    analizar_y_graficar(paginas)
+ 
+    construir_grafo_pyvis(grafo, paginas, output_file="TP5/EJ3/grafo_unlu.html")

@@ -11,37 +11,37 @@ from pyvis.network import Network
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MiniCrawler/1.0)"}
 
-MAX_PAGINAS_POR_SITIO = 1  # Cuantas paginas se pueden visitar por dominio
-MAX_PROF_LOGICA = 1  # Profundidad maxima del crawler, cuantos saltos desde la semilla
-MAX_PROF_FISICA = 1  # Arquitectura de directorios (cantidad de barras de la URL)
+MAX_PAGINAS_POR_SITIO = 20 # Cuantas paginas se pueden visitar por dominio
+MAX_PROF_LOGICA = 3  # Profundidad maxima del crawler, cuantos saltos desde la semilla
+MAX_PROF_FISICA = 3  # Arquitectura de directorios (cantidad de barras de la URL)
 
 DELAY_REQUEST = 1
 TIMEOUT = 8
 
-# SEMILLA = [
-#     "https://www.google.com",
-#     "https://www.youtube.com",
-#     "https://mail.google.com",
-#     "https://docs.google.com",
-#     "https://www.facebook.com",
-#     "https://outlook.office.com",
-#     "https://chatgpt.com",
-#     "https://login.microsoftonline.com",
-#     "https://outlook.cloud.microsoft",
-#     "https://accounts.google.com",
-#     "https://campus-1001.ammon.cloud",
-#     "https://www.linkedin.com",
-#     "https://www.bing.com",
-#     "https://drive.google.com",
-#     "https://www.instagram.com",
-#     "https://x.com",
-#     "https://github.com",
-#     "https://gemini.google.com",
-#     "https://calendar.google.com",
-#     "https://web.whatsapp.com"
-# ]
+SEMILLA = [
+    "https://www.google.com",
+    "https://www.youtube.com",
+    "https://mail.google.com",
+    "https://docs.google.com",
+    "https://www.facebook.com",
+    "https://outlook.office.com",
+    "https://chatgpt.com",
+    "https://login.microsoftonline.com",
+    "https://outlook.cloud.microsoft",
+    "https://accounts.google.com",
+    "https://campus-1001.ammon.cloud",
+    "https://www.linkedin.com",
+    "https://www.bing.com",
+    "https://drive.google.com",
+    "https://www.instagram.com",
+    "https://x.com",
+    "https://github.com",
+    "https://gemini.google.com",
+    "https://calendar.google.com",
+    "https://web.whatsapp.com"
+]
 
-SEMILLA = ["https://www.google.com"]
+# SEMILLA = ["https://www.google.com"]
 
 # --------------- FUNCIONES ------------------
 
@@ -375,8 +375,8 @@ if __name__ == "__main__":
             print(f"  {dominio:<40} {cant} páginas")
  
     # ---------- Grafo ----------
-    # construir_grafo_pyvis(
-    #     grafo=crawler.grafo,
-    #     paginas_visitadas=crawler.done_list,
-    #     output_file="TP5/EJ2/grafo_crawler.html",
-    # )
+    construir_grafo_pyvis(
+        grafo=crawler.grafo,
+        paginas_visitadas=crawler.done_list,
+        output_file="TP5/EJ2/grafo_crawler.html",
+    )

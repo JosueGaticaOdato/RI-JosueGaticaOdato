@@ -1,4 +1,5 @@
 from functools import lru_cache
+import time
 import requests
 import sys
 from bs4 import BeautifulSoup
@@ -8,11 +9,14 @@ from pyvis.network import Network
 
 # --------------- CONSTANTES ----------------
 
-HEADERS = {"User-Agent": "Mozilla/5.0"}
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MiniCrawler/1.0)"}
 
-CANTIDAD_MAXIMA_PAGINAS_POR_SITIO = 1 # Cuantas paginas se pueden visitar por dominio
-PROFUNDIDAD_LOGICA_MAXIMA = 1 # Profundidad maxima del crawler, cuantos saltos desde la semilla
-PROFUNDIDAD_FISICA_MAXIMA = 1 # Arquitectura de directorios (cantidad de barras de la URL)
+MAX_PAGINAS_POR_SITIO = 1  # Cuantas paginas se pueden visitar por dominio
+MAX_PROF_LOGICA = 1  # Profundidad maxima del crawler, cuantos saltos desde la semilla
+MAX_PROF_FISICA = 1  # Arquitectura de directorios (cantidad de barras de la URL)
+
+DELAY_REQUEST = 1
+TIMEOUT = 8
 
 # SEMILLA = [
 #     "https://www.google.com",
@@ -37,36 +41,10 @@ PROFUNDIDAD_FISICA_MAXIMA = 1 # Arquitectura de directorios (cantidad de barras 
 #     "https://web.whatsapp.com"
 # ]
 
-SEMILLA = [
-   "https://www.google.com"
-]
+SEMILLA = ["https://www.google.com"]
 
 # --------------- FUNCIONES ------------------
 
-@lru_cache
-def obtener_enlaces(url: str = None, proxy=None):
-    "Dada una URL, descarga la pagina y obtengo los enlaces. Todos los enlaces estan normalizados"
-    try:
-        # Descargar la pagina
-        response = requests.get(url, headers=HEADERS)
-
-        # Parser
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        links = []
-
-        # Buscar todos los hipervinculos
-        for a in soup.find_all("a", href=True):
-          href = a.get("href")
-
-          full_url = parse_url(url, href) # Normalizo
-
-          links.append(full_url)
-
-        return links
-    except Exception as e:
-        print(e)
-        return []
 
 def obtener_dominio(url):
     """
@@ -75,72 +53,205 @@ def obtener_dominio(url):
     """
     return urlparse(url).netloc
 
-def parse_url(base_url, link):
-   "Dada una URL y su link, normalizo el enlace"
-   if urlparse(link).fragment: # Si tiene fragmento, descarto
-      link = link.split("#")[0]
-  
-   if urlparse(link).scheme: # URL absoluta, devuelve tal cual
-      return link
-   
-   return urljoin(base_url, link) # Relativa pasa a absoluta
 
-# ----------------- CRAWLER -----------------
+def profundidad_fisica(url):
+    """
+    Profundidad fisica: cantidad de segmentos de path no vacios (cantidad de barras)
+    Ejemplo: https://example.com/a/b/c  ->  3
+              https://example.com/  ->  0
+    """
+    path = urlparse(url).path
+    segmentos = [s for s in path.split("/") if s]
+    return len(segmentos)
 
-# Frontier: cola FIFO
-def crawler(semilla):
-    "Genera el corpus de documento dada una semilla de sitios"
 
-    todo_list = deque() # Cola de URLs por visitar
-    done_list = set()   # URLs ya visitadas
+def normalizar_url(base_url, href):
+    """
+    Convierte un href relativo en absoluto y descarta fragmentos y
+    esquemas no HTTP/HTTPS.
+    """
+    if not href:
+        return None
 
-    # Contador de paginas por dominio
-    paginas_por_sitio = defaultdict(int)
+    # Eliminar fragmento
+    if "#" in href:
+        href = href.split("#")[0]
+    if not href:
+        return None
 
-    # Grafo dirigido
-    # clave = url
-    # valor = lista de urls destino
-    grafo = defaultdict(list)
+    parsed = urlparse(href)
 
-    # Inicializado la semilla
-    for url in semilla:
-       todo_list.append((url,0)) # Profundidad sero porque recien arranco
+    # Descartar esquemas que no sean http/https (mailto:, javascript:, etc.)
+    if parsed.scheme and parsed.scheme not in ("http", "https"):
+        return None
 
-    # Mientras tenga URLs por recorrer
-    while todo_list:
-       
-      url, profundidad = todo_list.popleft()
+    # Convertir relativa a absoluta
+    full = urljoin(base_url, href)
 
-      # La salto si ya la visite
-      if url in done_list:
-         continue
-    
-      dominio = obtener_dominio(url)
+    # Verificar esquema final
+    if not full.startswith(("http://", "https://")):
+        return None
 
-      # Si paso la restriccion de la profundad y la cantidad maxima, salto
-      if paginas_por_sitio[dominio] >= CANTIDAD_MAXIMA_PAGINAS_POR_SITIO:
-         continue
-    
-      if profundidad > PROFUNDIDAD_LOGICA_MAXIMA:
-         continue
+    return full
 
-      print(f"[{profundidad}] Crawling: {url}")
 
-      enlaces = obtener_enlaces(url)
+@lru_cache
+def obtener_pagina(url: str):
+    "Descarga una página y devuelve el objeto Response o None si falla."
+    try:
 
-      # Agrego a la URL ya visitada y subo el contador del dominio
-      done_list.add(url)
-      paginas_por_sitio[dominio] += 1
+        # Descargar la pagina
+        response = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+        response.raise_for_status()
+        return response
+    except requests.exceptions.RequestException as e:
+        print(f"    [ERROR] {url} -> {e}")
+        return None
 
-      for link in enlaces:
-         # Agrego al grafo
-         grafo[url].append(link)
 
-         if link not in done_list:
-            # Agrego a la lista con una profundidad mas
-            todo_list.append((link,profundidad+1))
-    
-    return grafo
+def extraer_enlaces(url: str, contenido: bytes) -> list[str]:
+    "Parsea el HTML y devuelve lista de URLs absolutas normalizadas."
+
+    # Parser
+    soup = BeautifulSoup(contenido, "html.parser")
+    enlaces = []
+
+    # Buscar todos los hipervinculos
+    for a in soup.find_all("a", href=True):
+        normalizada = normalizar_url(url, a["href"])  # Normalizo
+        if normalizada:
+            enlaces.append(normalizada)
+    return enlaces
+
+
+# --------------- CRAWLER  ------------------
+
+
+class Crawler:
+    """
+    Implementa el algoritmo de crawling con frontier FIFO.
+
+    Cada entrada en la frontier es una tupla:
+        (url, dominio_origen, prof_logica, prof_fisica)
+
+    done_list : set de URLs ya visitadas (para no repetir)
+    paginas_por_sitio : dict dominio -> cantidad de páginas crawleadas
+    grafo : dict url -> lista de urls enlazadas (para armar pyvis)
+    """
+
+    def __init__(
+        self,
+        semilla: list[str],
+        max_paginas_por_sitio: int = MAX_PAGINAS_POR_SITIO,
+        max_prof_logica: int = MAX_PROF_LOGICA,
+        max_prof_fisica: int = MAX_PROF_FISICA,
+    ):
+
+        self.max_paginas_por_sitio = max_paginas_por_sitio
+        self.max_prof_logica = max_prof_logica
+        self.max_prof_fisica = max_prof_fisica
+
+        self.done_list: set[str] = set()
+        self.paginas_por_sitio: dict[str, int] = {}
+        self.grafo: dict[str, list[str]] = {}  # url_origen -> [url_destino, ...]
+
+        # Frontier: deque usada como cola FIFO
+        self.frontier: deque = deque()
+
+        # Inicializar frontier con el conjunto semilla
+        for url in semilla:
+            dominio = obtener_dominio(url)
+            self.frontier.append((url, dominio, 0, 0))
+            self.paginas_por_sitio.setdefault(dominio, 0)
+
+    # ---------- Políticas de crawling ----------
+
+    def permite_crawl(
+        self, url: str, dominio_origen: str, prof_logica: int, prof_fisica: int
+    ) -> bool:
+        """
+        Devuelve True si la URL puede crawlearse según las políticas definidas.
+        """
+        dominio = obtener_dominio(url)
+
+        # Ya visitada
+        if url in self.done_list:
+            return False
+
+        # Profundidad lógica excedida
+        if prof_logica > self.max_prof_logica:
+            return False
+
+        # Profundidad física excedida
+        if prof_fisica > self.max_prof_fisica:
+            return False
+
+        # Máximo de páginas por sitio alcanzado
+        if self.paginas_por_sitio.get(dominio, 0) >= self.max_paginas_por_sitio:
+            return False
+
+        return True
+
+    def calcular_prof_logica(
+        self, dominio_origen: str, url_destino: str, prof_logica_actual: int
+    ) -> int:
+        "La profundidad lógica aumenta cuando se cambia de dominio."
+
+        dominio_destino = obtener_dominio(url_destino)
+        if dominio_destino != dominio_origen:
+            return prof_logica_actual + 1
+        return prof_logica_actual
+
+    # ---------- Crawleo ----------
+
+    def crawl(self):
+        "Ejecuta el crawler hasta vaciar la frontier"
+
+        total = 0
+
+        while self.frontier:
+            url, dominio_origen, prof_logica, prof_fisica = self.frontier.popleft()
+
+            if not self.permite_crawl(url, dominio_origen, prof_logica, prof_fisica):
+                continue
+
+            dominio = obtener_dominio(url)
+            print(f"[{total+1}] Crawling (PL={prof_logica}, PF={prof_fisica}): {url}")
+
+            # Descargar página
+            response = obtener_pagina(url)
+            if response is None:
+                continue
+
+            # Marcar como visitada
+            self.done_list.add(url)
+            self.paginas_por_sitio[dominio] = self.paginas_por_sitio.get(dominio, 0) + 1
+            total += 1
+
+            # Extraer enlaces
+            enlaces = extraer_enlaces(url, response.content)
+            self.grafo[url] = []
+
+            for link in enlaces:
+
+                # Calcular profundidades del enlace
+                nueva_pl = self.calcular_prof_logica(dominio, link, prof_logica)
+                nueva_pf = profundidad_fisica(link)
+
+                # Registrar arista en el grafo independientemente de si se va a crawlear
+                self.grafo[url].append(link)
+
+                # Agregar a frontier si no fue visitada y no está ya encolada
+                if link not in self.done_list:
+                    dominio_link = obtener_dominio(link)
+                    self.paginas_por_sitio.setdefault(dominio_link, 0)
+                    self.frontier.append((link, dominio, nueva_pl, nueva_pf))
+
+            time.sleep(DELAY_REQUEST)
+
+        print(f"\nCrawling finalizado. Páginas visitadas: {total}")
+        return total
+
 
 """
 Algoritmo visto ne clase de crawler
@@ -162,24 +273,110 @@ def crawler(frontier:Queue):
 
 # ------------- CONSTRUI GRAFO --------------
 
-def visualizar_grafo(grafo):
-  net = Network(height="800px", width="100%", directed=True)
+def construir_grafo_pyvis(
+    grafo: dict[str, list[str]],
+    paginas_visitadas: set[str],
+    output_file: str = "grafo_crawler.html",
+):
+    """
+    Construye y guarda el grafo de enlaces usando pyvis.
+    - Nodos visitados: azul
+    - Nodos enlazados pero no visitados: gris
+    - Aristas dirigidas: de página origen a página destino
+    """
+    net = Network(
+        height="800px",
+        width="100%",
+        directed=True,
+        bgcolor="#1a1a2e",
+        font_color="white",
+        notebook=False,
+    )
 
-  for src in grafo:
-      net.add_node(src, label=src)
+    net.set_options("""
+    {
+      "nodes": {
+        "shape": "dot",
+        "size": 10,
+        "font": { "size": 10 }
+      },
+      "edges": {
+        "arrows": { "to": { "enabled": true, "scaleFactor": 0.5 } },
+        "color": { "opacity": 0.5 },
+        "smooth": { "type": "dynamic" }
+      },
+      "physics": {
+        "barnesHut": {
+          "gravitationalConstant": -8000,
+          "springLength": 150
+        },
+        "stabilization": { "iterations": 100 }
+      }
+    }
+    """)
 
-      for dst in grafo[src]:
-          net.add_node(dst, label=dst)
-          net.add_edge(src, dst)
+    nodos_agregados = set()
 
-  #net.show("grafo.html")
-  #net.show("grafo.html", notebook=False)
-  net.write_html("TP5/EJ2/grafo.html")
+    def agregar_nodo(url, visitado):
+        if url in nodos_agregados:
+            return
+        dominio = obtener_dominio(url)
+        label = dominio  # Etiqueta corta: solo el dominio
+        color = "#4fc3f7" if visitado else "#90a4ae"
+        titulo = f"<b>{url}</b><br>Dominio: {dominio}<br>{'✓ Visitada' if visitado else '○ No visitada'}"
+        net.add_node(
+            url, label=label, color=color, title=titulo, size=12 if visitado else 7
+        )
+        nodos_agregados.add(url)
+
+    # Limitar aristas para legibilidad (máximo 5 por nodo)
+    MAX_ARISTAS_POR_NODO = 5
+
+    for origen, destinos in grafo.items():
+        agregar_nodo(origen, origen in paginas_visitadas)
+        for destino in destinos[:MAX_ARISTAS_POR_NODO]:
+            agregar_nodo(destino, destino in paginas_visitadas)
+            net.add_edge(origen, destino)
+
+    net.save_graph(output_file)
+    print(f"  Grafo guardado en: {output_file}")
+    print(f"  Nodos: {len(nodos_agregados)}")
+    print(
+        f"  Aristas: {sum(min(len(v), MAX_ARISTAS_POR_NODO) for v in grafo.values())}"
+    )
+
 
 # ------------------- MAIN -----------------
 
 if __name__ == "__main__":
 
-  grafo = crawler(semilla=SEMILLA)
-  visualizar_grafo(grafo)
-  #print(obtener_enlaces("https://es.wikipedia.org/wiki/Argentina"))
+    print(" Crawler ")
+    print("=" * 60)
+    print(f"  Semilla          : {len(SEMILLA)} sitios (top Netcraft)")
+    print(f"  Máx. pág/sitio   : {MAX_PAGINAS_POR_SITIO}")
+    print(f"  Prof. lógica máx : {MAX_PROF_LOGICA}")
+    print(f"  Prof. física máx : {MAX_PROF_FISICA}")
+    print("=" * 60)
+
+    crawler = Crawler(
+        semilla=SEMILLA,
+        max_paginas_por_sitio=MAX_PAGINAS_POR_SITIO,
+        max_prof_logica=MAX_PROF_LOGICA,
+        max_prof_fisica=MAX_PROF_FISICA,
+    )
+    
+    crawler.crawl()
+
+    # ---------- Estadisticas ----------
+    print("\n--- Páginas por dominio ---")
+    for dominio, cant in sorted(crawler.paginas_por_sitio.items(),
+                                key=lambda x: x[1], reverse=True):
+        if cant > 0:
+            print(f"  {dominio:<40} {cant} páginas")
+ 
+    # ---------- Grafo ----------
+    # construir_grafo_pyvis(
+    #     grafo=crawler.grafo,
+    #     paginas_visitadas=crawler.done_list,
+    #     output_file="TP5/EJ2/grafo_crawler.html",
+    # )

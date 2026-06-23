@@ -1,0 +1,9 @@
+Punto 1: OK.
+
+Punto 2: OK.
+
+Punto 3: OK.
+
+Punto 4: OK.
+
+Punto 5: Revisar: "Lo que se trata de mostrar en el gráfico de resultados es la cantidad de páginas que son necesarias para abarcar el % correspondiente al top-k establecido". Se pide overlap entre sitios visitados 
